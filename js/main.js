@@ -196,14 +196,22 @@ function skipExtras() {
 
 function confirmBurgerWithExtras() {
     if (!pendingBurger) return;
-    // Add the burger itself
-    cart.push({ name: pendingBurger.name, price: pendingBurger.price });
-    // Add any checked extras
-    document.querySelectorAll('.extra-checkbox:checked').forEach(cb => {
-        cart.push({ name: cb.dataset.name, price: parseFloat(cb.dataset.price) });
-    });
+    const checkedExtras = [...document.querySelectorAll('.extra-checkbox:checked')];
+    
+    if (checkedExtras.length === 0) {
+        // No extras selected — just add the plain burger
+        cart.push({ name: pendingBurger.name, price: pendingBurger.price });
+    } else {
+        // Bundle burger + extras into one labelled item
+        const extraNames = checkedExtras.map(cb => cb.dataset.name).join(', ');
+        const extraTotal = checkedExtras.reduce((sum, cb) => sum + parseFloat(cb.dataset.price), 0);
+        const bundleName = `${pendingBurger.name} (+ ${extraNames})`;
+        const bundlePrice = pendingBurger.price + extraTotal;
+        cart.push({ name: bundleName, price: bundlePrice });
+    }
+
     saveCart();
-    if (cart.length <= 2) toggleBasket(true);
+    if (cart.length === 1) toggleBasket(true);
     closeBurgerExtrasModal();
     // Show brief confirmation
     const btn = document.getElementById('confirm-extras-btn');
