@@ -29,8 +29,9 @@ body {
   line-height: 1.6;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(255, 127, 0, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 85% 30%, rgba(255, 127, 0, 0.08) 0%, transparent 50%);
+    radial-gradient(ellipse 80% 60% at 85% 10%, rgba(255, 117, 31, 0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 50% at 15% 90%, rgba(255, 90, 0, 0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(20, 10, 0, 0.3) 0%, transparent 100%);
 }
 
 /* Typography */
