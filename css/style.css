@@ -63,10 +63,8 @@ header {
   top: 0;
   width: 100%;
   z-index: 100;
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--glass-border);
+  background: var(--primary);
+  border-bottom: none;
   transition: all 0.3s ease;
 }
 
@@ -93,7 +91,7 @@ nav {
 }
 
 .logo-img {
-  height: 48px;
+  height: 56px;
   width: auto;
   display: block;
   transition: opacity 0.3s ease;
@@ -110,7 +108,7 @@ nav {
 }
 
 .nav-links a {
-  color: var(--text-main);
+  color: #fff;
   text-decoration: none;
   font-weight: 600;
   font-size: 1.1rem;
@@ -125,12 +123,12 @@ nav {
   height: 2px;
   bottom: -4px;
   left: 0;
-  background-color: var(--primary);
+  background-color: #fff;
   transition: width 0.3s ease;
 }
 
 .nav-links a:hover {
-  color: var(--primary);
+  color: rgba(255,255,255,0.8);
 }
 
 .nav-links a:hover::after {
