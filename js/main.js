@@ -221,6 +221,43 @@ function confirmBurgerWithExtras() {
     setTimeout(() => { btn.innerText = orig; btn.style.background = ''; }, 1500);
 }
 
+// Fries Selection Modal logic
+let pendingFries = null;
+
+function openFriesSelection(baseName, basePrice) {
+    pendingFries = { name: baseName, price: parseFloat(basePrice.replace('€', '')) };
+    document.getElementById('fries-normal-radio').checked = true;
+    document.getElementById('fries-selection-modal').classList.add('active');
+}
+
+function closeFriesSelectionModal() {
+    document.getElementById('fries-selection-modal').classList.remove('active');
+    pendingFries = null;
+}
+
+function confirmFriesSelection() {
+    if (!pendingFries) return;
+    
+    const isSweetPotato = document.getElementById('fries-sweet-radio').checked;
+    
+    if (isSweetPotato) {
+        cart.push({ name: 'Sweet Potato Fries', price: 2.99 });
+    } else {
+        cart.push({ name: pendingFries.name, price: pendingFries.price });
+    }
+
+    saveCart();
+    if (cart.length === 1) toggleBasket(true);
+    closeFriesSelectionModal();
+    
+    // Feedback on confirm button
+    const btn = document.getElementById('confirm-fries-btn');
+    const orig = btn.innerText;
+    btn.innerText = 'Added! ✅';
+    btn.style.background = 'var(--primary)';
+    setTimeout(() => { btn.innerText = orig; btn.style.background = ''; }, 1500);
+}
+
 function addToCart(itemName, price) {
     // Standardize price parsing
     let numericPrice = typeof price === 'string' 
@@ -452,6 +489,38 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', extrasHTML);
+    }
+    // Fries Selection Modal
+    if (!document.getElementById('fries-selection-modal')) {
+        const friesModalHTML = `
+            <div class="combo-modal" id="fries-selection-modal" style="z-index: 10001;">
+                <div class="modal-content">
+                    <h2 class="modal-title">🍟 Choose Your Fries</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem;">Would you like our classic house fries or sweet potato fries?</p>
+                    <div class="extras-list">
+                        <label class="extra-item" style="cursor: pointer;">
+                            <div class="extra-info">
+                                <span class="extra-name">Classic Fries</span>
+                                <span class="extra-price">€2.49</span>
+                            </div>
+                            <input type="radio" name="fries-type" id="fries-normal-radio" value="normal" checked>
+                        </label>
+                        <label class="extra-item" style="cursor: pointer;">
+                            <div class="extra-info">
+                                <span class="extra-name">Sweet Potato Fries</span>
+                                <span class="extra-price">€2.99</span>
+                            </div>
+                            <input type="radio" name="fries-type" id="fries-sweet-radio" value="sweet">
+                        </label>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                        <button class="btn btn-outline" style="flex: 1" onclick="closeFriesSelectionModal()">Cancel</button>
+                        <button class="btn" id="confirm-fries-btn" style="flex: 1" onclick="confirmFriesSelection()">Add to Basket</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', friesModalHTML);
     }
     updateBasketUI();
 });
