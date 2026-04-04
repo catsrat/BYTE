@@ -1,4 +1,4 @@
-const CACHE_NAME = 'byte-burgers-v20';
+const CACHE_NAME = 'byte-burgers-v21';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -8,7 +8,7 @@ const ASSETS_TO_CACHE = [
   './thanks.html',
   './css/style.css',
   './js/main.js',
-  './images/logo.png',
+  './images/logo-white.png',
   './images/app-icon.png',
   './images/halal-badge.png',
   './manifest.json'
