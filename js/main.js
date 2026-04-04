@@ -122,7 +122,7 @@ const menuData = {
     burgers: [
         { name: 'Goat Byte Original', price: 6.99, isGoat: true },
         { name: 'Spicy Goat Byte', price: 7.49, isGoat: true },
-        { name: 'Masala Goat Byte', price: 7.99, isGoat: true },
+        { name: 'Truffle Goat Byte', price: 7.99, isGoat: true },
         { name: 'Byte Classic', price: 5.99, isGoat: false },
         { name: 'Double Byte', price: 7.49, isGoat: false },
         { name: 'Smoky BBQ Byte', price: 6.99, isGoat: false },
@@ -441,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <select id="combo-burger" class="select-input">
                             <option>Goat Byte Original</option>
                             <option>Spicy Goat Byte</option>
-                            <option>Masala Goat Byte</option>
+                            <option>Truffle Goat Byte</option>
                             <option>Byte Classic</option>
                             <option>Double Byte</option>
                         </select>
