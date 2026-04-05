@@ -110,6 +110,12 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 // Shopping Basket Logic
+// Force wipe corrupt legacy carts from v32 
+if (!localStorage.getItem('byteCartV34_migrated')) {
+    localStorage.removeItem('byteCart');
+    localStorage.setItem('byteCartV34_migrated', 'true');
+}
+
 let cart = JSON.parse(localStorage.getItem('byteCart')) || [];
 
 function saveCart() {
