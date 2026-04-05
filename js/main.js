@@ -428,6 +428,11 @@ function checkout() {
         beverage_gross: totalBevGross
     };
     
+    let vatText = `\n\n--- VAT Breakdown ---\nNet Total: €${(totalNetFood + totalNetBev).toFixed(2)}\n`;
+    if (vatFood > 0) vatText += `VAT (7%): €${vatFood.toFixed(2)}\n`;
+    if (vatBev > 0) vatText += `VAT (19%): €${vatBev.toFixed(2)}`;
+    finalOrder += vatText;
+    
     localStorage.setItem('byteOrderVATDetails', JSON.stringify(internalVatBreakdown));
     
     // Redirect to order page with full summary
