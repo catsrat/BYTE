@@ -312,15 +312,20 @@ function confirmFriesSelection() {
     setTimeout(() => { btn.innerText = orig; btn.style.background = ''; }, 1500);
 }
 
+function isBeverage(name) {
+    let n = name.toLowerCase();
+    return menuData.drinks.includes(name) || n.includes("shake") || n.includes("soda") || n.includes("cola") || n.includes("drink") || n.includes("milkshake") || n.includes("juice") || n.includes("water");
+}
+
 function addToCart(itemName, price, overrideFood, overrideBev) {
     // Standardize price parsing
     let numericPrice = typeof price === 'string' 
         ? parseFloat(price.replace('€', '').replace('+', '')) 
         : price;
         
-    let isBeverage = menuData.drinks.includes(itemName);
-    let foodG = overrideFood !== undefined ? overrideFood : (isBeverage ? 0 : numericPrice);
-    let bevG = overrideBev !== undefined ? overrideBev : (isBeverage ? numericPrice : 0);
+    let bevCheck = isBeverage(itemName);
+    let foodG = overrideFood !== undefined ? overrideFood : (bevCheck ? 0 : numericPrice);
+    let bevG = overrideBev !== undefined ? overrideBev : (bevCheck ? numericPrice : 0);
         
     cart.push({ 
         name: itemName, 
@@ -402,10 +407,6 @@ function checkout() {
     let finalOrder = `${itemsSummary}\n\nItems Total: €${total.toFixed(2)}`;
     
     // Internal VAT Calculation (German Rules)
-    function isBeverage(name) {
-        let n = name.toLowerCase();
-        return menuData.drinks.includes(name) || n.includes("shake") || n.includes("soda") || n.includes("cola") || n.includes("drink") || n.includes("milkshake") || n.includes("juice") || n.includes("water");
-    }
 
     const totalFoodGross = cart.reduce((sum, item) => {
         let fg = item.foodGross !== undefined ? item.foodGross : (isBeverage(item.name) ? 0 : item.price);
