@@ -127,16 +127,29 @@
                 localStorage.setItem('byteOrderVATDetails', JSON.stringify(vatData));
                 
                 if(fee > 0) {
-                    const distStr = isConfirmed ? `${distance.toFixed(1)}km` : 'Distance unconfirmed';
-                    finalOutput += `\nDelivery Fee: €${fee.toFixed(2)} (${distStr})`;
-                    finalOutput += `\nFinal Total: €${vatData.gross_total.toFixed(2)}`;
+                    finalOutput += `\n\nDelivery Fee: €${fee.toFixed(2)}`;
                 }
                 
-                finalOutput += `\n\n--- VAT Breakdown ---\nNet Total: €${vatData.net_total.toFixed(2)}\n`;
-                if (vatData.vat_7_amount > 0) finalOutput += `VAT (7% Food): €${vatData.vat_7_amount.toFixed(2)}\n`;
+                finalOutput += `\n\n--- VAT Breakdown ---\n\n`;
                 
-                let total19 = vatData.vat_19_amount + vatData.delivery_vat_19;
-                if (total19 > 0) finalOutput += `VAT (19%): €${total19.toFixed(2)}`;
+                const netFoodNum = vatData.food_gross / 1.07;
+                if(vatData.food_gross > 0) {
+                    finalOutput += `Net Food: €${netFoodNum.toFixed(2)}\n`;
+                    finalOutput += `VAT (7% Food): €${vatData.vat_7_amount.toFixed(2)}\n\n`;
+                }
+                
+                if(vatData.beverage_gross > 0) {
+                    finalOutput += `Net Beverage: €${(vatData.beverage_gross / 1.19).toFixed(2)}\n`;
+                    finalOutput += `VAT (19% Beverage): €${vatData.vat_19_amount.toFixed(2)}\n\n`;
+                }
+                
+                if(fee > 0) {
+                    finalOutput += `Net Delivery: €${vatData.delivery_net.toFixed(2)}\n`;
+                    finalOutput += `VAT (19% Delivery): €${vatData.delivery_vat_19.toFixed(2)}\n\n`;
+                }
+                
+                finalOutput += `Total VAT: €${vatData.vat_total.toFixed(2)}\n\n`;
+                finalOutput += `Final Total: €${vatData.gross_total.toFixed(2)}`;
             }
             itemsField.value = finalOutput;
         }
@@ -198,7 +211,7 @@
             if (items) {
                 document.getElementById('items-field').dataset.baseItems = items;
                 // Extract subtotal from the summary string
-                const totalMatch = items.match(/Total: €([\d.]+)/);
+                const totalMatch = items.match(/Items Total: €([\d.]+)/);
                 if (totalMatch) {
                     const subtotal = parseFloat(totalMatch[1]);
                     const totalDisplay = document.getElementById('final-total-display');

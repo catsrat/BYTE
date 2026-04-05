@@ -399,7 +399,7 @@ function checkout() {
 
     const itemsSummary = cart.map(item => `- ${item.name} (€${item.price.toFixed(2)})`).join('\n');
     const total = cart.reduce((sum, item) => sum + item.price, 0);
-    let finalOrder = `${itemsSummary}\n\nTotal: €${total.toFixed(2)}`;
+    let finalOrder = `${itemsSummary}\n\nItems Total: €${total.toFixed(2)}`;
     
     // Internal VAT Calculation (German Rules)
     const totalFoodGross = cart.reduce((sum, item) => {
