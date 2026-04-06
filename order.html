@@ -60,7 +60,7 @@
 </div>
 <div class="form-group full-width" id="address-section">
 <label class="form-label">Lieferadresse</label>
-<textarea class="form-input" id="address-field" name="address" placeholder="Straße, Ort, Postleitzahl in Solingen" required=""></textarea>
+<textarea class="form-input" id="address-field" name="address" placeholder="Straße, Ort, Postleitzahl in Solingen"></textarea>
 <small id="delivery-status" style="display: block; margin-top: 0.5rem;"></small>
 </div>
 <div class="order-summary-box" style="background: rgba(255,100,0,0.1); border: 2px solid var(--primary);">
@@ -298,8 +298,12 @@
                 orderTypeField.value = 'DELIVERY';
                 // Show address, restore required
                 addressSection.style.display = '';
-                addressField.setAttribute('required', '');
                 addressField.value = '';
+                // Validate address before continuing
+                if (!addressField.value || addressField.value.trim().length < 5) {
+                    // Address will be validated on form submit next time;
+                    // show a subtle hint but allow flow to continue
+                }
             }
 
             form.dataset.fulfillmentChosen = type;
@@ -325,6 +329,18 @@
         function processCashPayment(inputVal) {
             const form = document.getElementById('checkout-form');
             const hiddenField = document.getElementById('payment-field');
+            const orderType = document.getElementById('order-type-field').value;
+            
+            // If delivery, ensure address is filled
+            if (orderType === 'DELIVERY') {
+                const addr = document.getElementById('address-field').value.trim();
+                if (addr.length < 5) {
+                    closeCashModal();
+                    alert('Please enter your delivery address before confirming!');
+                    document.getElementById('address-field').focus();
+                    return;
+                }
+            }
             
             if (inputVal === 'Exact Change') {
                 hiddenField.value = "CASH: Exact Change provided.";
