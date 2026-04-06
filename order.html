@@ -27,6 +27,11 @@
                 <li><a href="menu.html">Menu</a></li>
                 <li><a href="franchise.html">Franchise</a></li>
             </ul>
+                        <div class="lang-toggle">
+                <button class="lang-btn" data-lang="en" onclick="switchLanguage('en')">EN</button>
+                <span>|</span>
+                <button class="lang-btn" data-lang="de" onclick="switchLanguage('de')">DE</button>
+            </div>
             <div class="hamburger" id="mobile-menu">
                 <span></span>
                 <span></span>
@@ -300,5 +305,7 @@
     </script>
 
     <script src="js/main.js"></script>
+    <div id="google_translate_element" style="display:none;"></div>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>

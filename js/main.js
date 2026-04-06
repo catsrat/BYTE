@@ -647,3 +647,45 @@ if ('serviceWorker' in navigator) {
         });
     });
 }
+
+/* --- Headless Language Toggle Engine --- */
+function googleTranslateElementInit() {
+    new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: 'en,de', autoDisplay: false}, 'google_translate_element');
+}
+
+window.switchLanguage = function(langCode) {
+    const select = document.querySelector('.goog-te-combo');
+    if (select) {
+        select.value = langCode;
+        select.dispatchEvent(new Event('change'));
+    }
+    
+    // Update UI Buttons globally
+    document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll(`.lang-btn[data-lang="${langCode}"]`).forEach(btn => btn.classList.add('active'));
+    
+    localStorage.setItem('byteLangActive', langCode);
+};
+
+// Ensure Google Translate honors sticky memory on load
+document.addEventListener('DOMContentLoaded', () => {
+    let savedLang = localStorage.getItem('byteLangActive');
+    
+    // Visually update buttons early
+    if(savedLang === 'de') {
+        document.querySelectorAll(`.lang-btn[data-lang="de"]`).forEach(btn => btn.classList.add('active'));
+        // Try toggling translation engine
+        let checkInt = setInterval(() => {
+            const select = document.querySelector('.goog-te-combo');
+            if(select) {
+                if(select.value !== 'de') {
+                    select.value = 'de';
+                    select.dispatchEvent(new Event('change'));
+                }
+                clearInterval(checkInt);
+            }
+        }, 300);
+    } else {
+        document.querySelectorAll(`.lang-btn[data-lang="en"]`).forEach(btn => btn.classList.add('active'));
+    }
+});
