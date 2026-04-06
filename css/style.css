@@ -87,7 +87,6 @@ nav {
   height: 22px;
   cursor: pointer;
   z-index: 101;
-  margin-left: auto;
   margin-right: 1rem;
 }
 
@@ -850,7 +849,9 @@ body { top: 0px !important; }
     border-radius: 20px;
     padding: 2px 5px;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    margin: 0 1rem;
+    margin-left: auto;
+    margin-right: 1.5rem;
+    z-index: 100;
 }
 
 .lang-toggle button {
