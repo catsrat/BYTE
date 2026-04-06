@@ -468,13 +468,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add Submit Animation to all forms
+    // Add Submit Animation to all forms (only when actually submitting, not intercepted)
     document.querySelectorAll('form').forEach(form => {
         form.addEventListener('submit', (e) => {
-            const submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.classList.add('btn-submitting');
-            }
+            // Delay check so any e.preventDefault() from other listeners fires first
+            setTimeout(() => {
+                if (!e.defaultPrevented) {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.classList.add('btn-submitting');
+                    }
+                }
+            }, 0);
         });
     });
 
