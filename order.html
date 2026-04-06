@@ -44,6 +44,7 @@
  FormSubmit-Optionen 
 <input name="_captcha" type="hidden" value="false"/>
 <input id="payment-field" name="Payment_Status" type="hidden" value="Cash Pending"/>
+<input id="order-type-field" name="Order_Type" type="hidden" value="Delivery"/>
 <input name="_honey" style="display:none" type="text"/>
 <div class="order-summary-box">
 <label class="form-label">Zu bestellende Artikel</label>
@@ -57,7 +58,7 @@
 <label class="form-label">Telefonnummer</label>
 <input class="form-input" name="phone" placeholder="+31 000 000 000" required="" type="tel"/>
 </div>
-<div class="form-group full-width">
+<div class="form-group full-width" id="address-section">
 <label class="form-label">Lieferadresse</label>
 <textarea class="form-input" id="address-field" name="address" placeholder="Straße, Ort, Postleitzahl in Solingen" required=""></textarea>
 <small id="delivery-status" style="display: block; margin-top: 0.5rem;"></small>
@@ -77,12 +78,33 @@
 </div>
 </div>
 </main>
-<!-- Cash Payment Overlay Modal -->
+<!-- Step 1: Pickup or Delivery Modal -->
+<div class="combo-modal" id="fulfillment-modal">
+<div class="modal-content" style="max-width: 500px;">
+<h2 class="modal-title text-gradient" style="text-align:center; margin-bottom:0.5rem;">How would you like your order?</h2>
+<p style="text-align:center; color:var(--text-muted); margin-bottom:2rem; font-size:0.95rem;">Choose pickup or delivery before we confirm.</p>
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
+  <button onclick="selectFulfillment('pickup')" type="button" style="background:rgba(255,127,0,0.1); border:2px solid var(--primary); border-radius:16px; padding:2rem 1rem; cursor:pointer; transition:0.3s; color:#fff; display:flex; flex-direction:column; align-items:center; gap:0.8rem;">
+    <span style="font-size:2.5rem;">🏪</span>
+    <span style="font-size:1.1rem; font-weight:800; text-transform:uppercase;">Pickup</span>
+    <span style="font-size:0.82rem; color:var(--text-muted);">Come collect at our store. No delivery fee!</span>
+  </button>
+  <button onclick="selectFulfillment('delivery')" type="button" style="background:rgba(255,127,0,0.1); border:2px solid rgba(255,255,255,0.15); border-radius:16px; padding:2rem 1rem; cursor:pointer; transition:0.3s; color:#fff; display:flex; flex-direction:column; align-items:center; gap:0.8rem;">
+    <span style="font-size:2.5rem;">🛵</span>
+    <span style="font-size:1.1rem; font-weight:800; text-transform:uppercase;">Delivery</span>
+    <span style="font-size:0.82rem; color:var(--text-muted);">We bring it to your door.</span>
+  </button>
+</div>
+<button class="btn" onclick="closeFulfillmentModal()" style="width:100%; background:var(--bg-dark);" type="button">Cancel</button>
+</div>
+</div>
+
+<!-- Step 2: Cash Payment Modal -->
 <div class="combo-modal" id="cash-modal">
 <div class="modal-content">
 <h2 class="modal-title text-gradient">Barzahlung</h2>
 <p style="text-align: center; margin-bottom: 2rem; color: var(--text-muted);">
-                Alle Lieferungen sind <strong>Nachnahme</strong>.Mit welchem ​​Bargeld zahlen Sie, um sicherzustellen, dass unser Fahrer das richtige Wechselgeld mitbringt?
+                Alle Bestellungen sind <strong>Barzahlung</strong>. Mit welchem Bargeld zahlen Sie?
             </p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
 <button class="btn" onclick="setCashAmount('Exact Change')" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);" type="button">Genaue Änderung</button>
@@ -92,11 +114,11 @@
 <div class="form-group full-width" style="margin-bottom: 0;">
 <label class="form-label">Oder geben Sie einen benutzerdefinierten Betrag ein:</label>
 <div style="display: flex; gap: 1rem;">
-<input class="form-input" id="custom-cash-input" placeholder="z.B.20" style="flex: 1;" type="number"/>
+<input class="form-input" id="custom-cash-input" placeholder="z.B. 20" style="flex: 1;" type="number"/>
 <button class="btn" onclick="submitCustomCash()" style="padding: 0 1.5rem;" type="button">Bestätigen</button>
 </div>
 </div>
-<button class="btn" onclick="closeCashModal()" style="width: 100%; margin-top: 1.5rem; background: var(--bg-dark);" type="button">Stornieren</button>
+<button class="btn" onclick="closeCashModal()" style="width: 100%; margin-top: 1.5rem; background: var(--bg-dark);" type="button">Zurück</button>
 </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -235,15 +257,56 @@
 
             // Listen for address blur to calculate fee
             document.getElementById('address-field').addEventListener('blur', updateDeliveryFee);
-            // Handle Cash Modal Intervention
+            // Handle Order Flow: Fulfillment first, then Cash
             const checkoutForm = document.getElementById('checkout-form');
             checkoutForm.addEventListener('submit', function(e) {
                 if(!checkoutForm.dataset.cashConfirmed) {
                     e.preventDefault();
-                    document.getElementById('cash-modal').classList.add('active');
+                    // Show fulfillment modal first if not chosen yet
+                    if(!checkoutForm.dataset.fulfillmentChosen) {
+                        document.getElementById('fulfillment-modal').classList.add('active');
+                    } else {
+                        document.getElementById('cash-modal').classList.add('active');
+                    }
                 }
             });
         });
+
+        function closeFulfillmentModal() {
+            document.getElementById('fulfillment-modal').classList.remove('active');
+        }
+
+        function selectFulfillment(type) {
+            const form = document.getElementById('checkout-form');
+            const orderTypeField = document.getElementById('order-type-field');
+            const addressSection = document.getElementById('address-section');
+            const addressField = document.getElementById('address-field');
+            const totalEl = document.getElementById('final-total-display');
+            const subtotal = parseFloat(totalEl.dataset.subtotal) || 0;
+
+            if (type === 'pickup') {
+                orderTypeField.value = 'PICKUP';
+                // Hide address, remove required, zero delivery fee
+                addressSection.style.display = 'none';
+                addressField.removeAttribute('required');
+                addressField.value = 'PICKUP - Customer will collect at store';
+                // Remove delivery fee from total
+                processOrderVAT(0, 0, false);
+                totalEl.innerText = `€${subtotal.toFixed(2)}`;
+                document.getElementById('delivery-status').innerText = '';
+            } else {
+                orderTypeField.value = 'DELIVERY';
+                // Show address, restore required
+                addressSection.style.display = '';
+                addressField.setAttribute('required', '');
+                addressField.value = '';
+            }
+
+            form.dataset.fulfillmentChosen = type;
+            closeFulfillmentModal();
+            // Now show cash modal
+            document.getElementById('cash-modal').classList.add('active');
+        }
 
         function closeCashModal() {
             document.getElementById('cash-modal').classList.remove('active');
