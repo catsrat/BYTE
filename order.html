@@ -44,8 +44,26 @@
  FormSubmit-Optionen 
 <input name="_captcha" type="hidden" value="false"/>
 <input id="payment-field" name="Payment_Status" type="hidden" value="Cash Pending"/>
-<input id="order-type-field" name="Order_Type" type="hidden" value="Delivery"/>
+<input id="order-type-field" name="Order_Type" type="hidden" value=""/>
 <input name="_honey" style="display:none" type="text"/>
+
+<!-- Step 1: Fulfillment Type Selector (inline, top of form) -->
+<div class="order-summary-box" id="fulfillment-selector" style="background: rgba(255,127,0,0.05); border: 2px solid rgba(255,127,0,0.3); margin-bottom: 0;">
+  <label class="form-label" style="margin-bottom: 1rem; display: block;">How would you like your order? <span style="color:var(--primary);">*</span></label>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <button type="button" id="btn-pickup" onclick="chooseFulfillment('pickup')" style="background: rgba(255,127,0,0.08); border: 2px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 1.2rem 0.8rem; cursor: pointer; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; transition: 0.25s;">
+      <span style="font-size: 2rem;">🏪</span>
+      <span style="font-size: 1rem; font-weight: 800; text-transform: uppercase;">Pickup</span>
+      <span style="font-size: 0.78rem; color: var(--text-muted);">No delivery fee</span>
+    </button>
+    <button type="button" id="btn-delivery" onclick="chooseFulfillment('delivery')" style="background: rgba(255,127,0,0.08); border: 2px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 1.2rem 0.8rem; cursor: pointer; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; transition: 0.25s;">
+      <span style="font-size: 2rem;">🛵</span>
+      <span style="font-size: 1rem; font-weight: 800; text-transform: uppercase;">Delivery</span>
+      <span style="font-size: 0.78rem; color: var(--text-muted);">We bring it to you</span>
+    </button>
+  </div>
+</div>
+
 <div class="order-summary-box">
 <label class="form-label">Zu bestellende Artikel</label>
 <textarea class="form-input" id="items-field" name="items" placeholder="Listen Sie hier die gewünschten Artikel auf..." required=""></textarea>
@@ -58,7 +76,8 @@
 <label class="form-label">Telefonnummer</label>
 <input class="form-input" name="phone" placeholder="+31 000 000 000" required="" type="tel"/>
 </div>
-<div class="form-group full-width" id="address-section">
+<!-- Address only shown for Delivery -->
+<div class="form-group full-width" id="address-section" style="display: none;">
 <label class="form-label">Lieferadresse</label>
 <textarea class="form-input" id="address-field" name="address" placeholder="Straße, Ort, Postleitzahl in Solingen"></textarea>
 <small id="delivery-status" style="display: block; margin-top: 0.5rem;"></small>
@@ -78,28 +97,7 @@
 </div>
 </div>
 </main>
-<!-- Step 1: Pickup or Delivery Modal -->
-<div class="combo-modal" id="fulfillment-modal">
-<div class="modal-content" style="max-width: 500px;">
-<h2 class="modal-title text-gradient" style="text-align:center; margin-bottom:0.5rem;">How would you like your order?</h2>
-<p style="text-align:center; color:var(--text-muted); margin-bottom:2rem; font-size:0.95rem;">Choose pickup or delivery before we confirm.</p>
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
-  <button onclick="selectFulfillment('pickup')" type="button" style="background:rgba(255,127,0,0.1); border:2px solid var(--primary); border-radius:16px; padding:2rem 1rem; cursor:pointer; transition:0.3s; color:#fff; display:flex; flex-direction:column; align-items:center; gap:0.8rem;">
-    <span style="font-size:2.5rem;">🏪</span>
-    <span style="font-size:1.1rem; font-weight:800; text-transform:uppercase;">Pickup</span>
-    <span style="font-size:0.82rem; color:var(--text-muted);">Come collect at our store. No delivery fee!</span>
-  </button>
-  <button onclick="selectFulfillment('delivery')" type="button" style="background:rgba(255,127,0,0.1); border:2px solid rgba(255,255,255,0.15); border-radius:16px; padding:2rem 1rem; cursor:pointer; transition:0.3s; color:#fff; display:flex; flex-direction:column; align-items:center; gap:0.8rem;">
-    <span style="font-size:2.5rem;">🛵</span>
-    <span style="font-size:1.1rem; font-weight:800; text-transform:uppercase;">Delivery</span>
-    <span style="font-size:0.82rem; color:var(--text-muted);">We bring it to your door.</span>
-  </button>
-</div>
-<button class="btn" onclick="closeFulfillmentModal()" style="width:100%; background:var(--bg-dark);" type="button">Cancel</button>
-</div>
-</div>
-
-<!-- Step 2: Cash Payment Modal -->
+<!-- Step 2: Cash Payment Modal (Delivery only) -->
 <div class="combo-modal" id="cash-modal">
 <div class="modal-content">
 <h2 class="modal-title text-gradient">Barzahlung</h2>
@@ -257,14 +255,22 @@
 
             // Listen for address blur to calculate fee
             document.getElementById('address-field').addEventListener('blur', updateDeliveryFee);
-            // Handle Order Flow: Fulfillment first, then Cash
+            
+            // Submit handler: if pickup already chosen submit direct, if delivery show cash modal
             const checkoutForm = document.getElementById('checkout-form');
             checkoutForm.addEventListener('submit', function(e) {
-                if(!checkoutForm.dataset.cashConfirmed) {
+                if (!checkoutForm.dataset.cashConfirmed) {
                     e.preventDefault();
-                    // Show fulfillment modal first if not chosen yet
-                    if(!checkoutForm.dataset.fulfillmentChosen) {
-                        document.getElementById('fulfillment-modal').classList.add('active');
+                    const orderType = document.getElementById('order-type-field').value;
+                    if (!orderType) {
+                        alert('Please select Pickup or Delivery first!');
+                        document.getElementById('fulfillment-selector').scrollIntoView({ behavior: 'smooth' });
+                        return;
+                    }
+                    if (orderType === 'PICKUP') {
+                        document.getElementById('payment-field').value = 'CASH: Pickup — Customer pays at store.';
+                        checkoutForm.dataset.cashConfirmed = 'true';
+                        checkoutForm.submit();
                     } else {
                         document.getElementById('cash-modal').classList.add('active');
                     }
@@ -272,53 +278,42 @@
             });
         });
 
-        function closeFulfillmentModal() {
-            document.getElementById('fulfillment-modal').classList.remove('active');
-        }
-
-        function selectFulfillment(type) {
-            const form = document.getElementById('checkout-form');
+        // Inline fulfillment selector (replaces modal)
+        function chooseFulfillment(type) {
             const orderTypeField = document.getElementById('order-type-field');
             const addressSection = document.getElementById('address-section');
             const addressField = document.getElementById('address-field');
             const totalEl = document.getElementById('final-total-display');
             const subtotal = parseFloat(totalEl.dataset.subtotal) || 0;
+            const btnPickup = document.getElementById('btn-pickup');
+            const btnDelivery = document.getElementById('btn-delivery');
+
+            // Reset button styles
+            btnPickup.style.border = '2px solid rgba(255,255,255,0.15)';
+            btnPickup.style.background = 'rgba(255,127,0,0.08)';
+            btnDelivery.style.border = '2px solid rgba(255,255,255,0.15)';
+            btnDelivery.style.background = 'rgba(255,127,0,0.08)';
 
             if (type === 'pickup') {
                 orderTypeField.value = 'PICKUP';
-                // Hide address, remove required, zero delivery fee
+                btnPickup.style.border = '2px solid var(--primary)';
+                btnPickup.style.background = 'rgba(255,127,0,0.2)';
                 addressSection.style.display = 'none';
-                addressField.removeAttribute('required');
                 addressField.value = 'PICKUP - Customer will collect at store';
-                // Remove delivery fee from total
                 processOrderVAT(0, 0, false);
                 totalEl.innerText = `€${subtotal.toFixed(2)}`;
                 document.getElementById('delivery-status').innerText = '';
             } else {
                 orderTypeField.value = 'DELIVERY';
-                // Show address, restore required
+                btnDelivery.style.border = '2px solid var(--primary)';
+                btnDelivery.style.background = 'rgba(255,127,0,0.2)';
                 addressSection.style.display = '';
                 addressField.value = '';
-                // Validate address before continuing
-                if (!addressField.value || addressField.value.trim().length < 5) {
-                    // Address will be validated on form submit next time;
-                    // show a subtle hint but allow flow to continue
-                }
-            }
-
-            form.dataset.fulfillmentChosen = type;
-            closeFulfillmentModal();
-
-            if (type === 'pickup') {
-                // No driver = no change needed, set payment and submit directly
-                document.getElementById('payment-field').value = 'CASH: Pickup — Customer pays at store.';
-                form.dataset.cashConfirmed = 'true';
-                form.submit();
-            } else {
-                // Delivery: ask about cash denomination for driver change
-                document.getElementById('cash-modal').classList.add('active');
+                addressField.focus();
             }
         }
+
+        function closeFulfillmentModal() {}  // kept for safety, no longer used
 
         function closeCashModal() {
             document.getElementById('cash-modal').classList.remove('active');
