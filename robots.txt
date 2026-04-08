@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://byte-burgers.com/sitemap.xml

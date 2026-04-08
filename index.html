@@ -4,8 +4,8 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>BYTE - Built Different</title>
-    <meta content="Premium smash burgers made fresh. Built for real cravings." name="description" />
+    <title>BYTE Burgers Solingen | Beste Halal Smash Burger in NRW</title>
+    <meta content="Erleben Sie Premium Smash Burger bei BYTE Burgers in Solingen. 100% Halal, frisch vorbereitet & einzigartiger Genuss in Nordrhein-Westfalen." name="description" />
     <!-- CSS -->
     <link href="css/style.css" rel="stylesheet" />
     <!-- PWA Meta Tags -->
@@ -15,6 +15,43 @@
     <meta content="yes" name="apple-mobile-web-app-capable" />
     <meta content="black-translucent" name="apple-mobile-web-app-status-bar-style" />
     <link rel="icon" type="image/png" href="images/logo.png" />
+    
+    <!-- SEO & Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Restaurant",
+      "name": "BYTE Burgers",
+      "image": "https://byte-burgers.com/images/logo.png",
+      "@id": "https://byte-burgers.com",
+      "url": "https://byte-burgers.com",
+      "telephone": "0212315737",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Weyerstraße 284A",
+        "addressLocality": "Solingen",
+        "addressRegion": "NRW",
+        "postalCode": "42719",
+        "addressCountry": "DE"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 51.176,
+        "longitude": 7.022
+      },
+      "servesCuisine": ["Burgers", "Halal"],
+      "priceRange": "€€",
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "opens": "11:00",
+          "closes": "22:00"
+        }
+      ],
+      "menu": "https://byte-burgers.com/menu.html"
+    }
+    </script>
     <style>
         /* Home specific styles */
         .hero {
