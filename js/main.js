@@ -197,7 +197,7 @@ function openComboSelection(type, feeLabel) {
         drinkSelect.appendChild(opt);
     });
 
-    title.innerText = type.toUpperCase().replace('_', ' ') + ' CONFIGURATOR';
+    title.innerText = type.toUpperCase().replace('_', ' ') + ' KONFIGURATOR';
     document.getElementById('combo-modal').classList.add('active');
 }
 
@@ -276,7 +276,7 @@ function confirmBurgerWithExtras() {
     // Show brief confirmation
     const btn = document.getElementById('confirm-extras-btn');
     const orig = btn.innerText;
-    btn.innerText = 'Added! ✅';
+    btn.innerText = 'Hinzugefügt! ✅';
     btn.style.background = 'var(--primary)';
     setTimeout(() => { btn.innerText = orig; btn.style.background = ''; }, 1500);
 }
@@ -313,7 +313,7 @@ function confirmFriesSelection() {
     // Feedback on confirm button
     const btn = document.getElementById('confirm-fries-btn');
     const orig = btn.innerText;
-    btn.innerText = 'Added! ✅';
+    btn.innerText = 'Hinzugefügt! ✅';
     btn.style.background = 'var(--primary)';
     setTimeout(() => { btn.innerText = orig; btn.style.background = ''; }, 1500);
 }
@@ -344,7 +344,7 @@ function addToCart(itemName, price, overrideFood, overrideBev) {
     // Show feedback
     const btn = event.currentTarget;
     const originalText = btn.innerText;
-    btn.innerText = "Added! ✅";
+    btn.innerText = "Hinzugefügt! ✅";
     btn.style.background = "var(--primary)";
     btn.style.color = "#fff";
     
@@ -394,7 +394,7 @@ function updateBasketUI() {
                 <h4>${item.name}</h4>
                 <p>€${item.price.toFixed(2)}</p>
             </div>
-            <button class="remove-item" onclick="removeFromCart(${index})">Remove</button>
+            <button class="remove-item" onclick="removeFromCart(${index})">Entfernen</button>
         `;
         itemsContainer.appendChild(itemEl);
     });
@@ -404,7 +404,7 @@ function updateBasketUI() {
 
 function checkout() {
     if (cart.length === 0) {
-        alert("Your basket is empty!");
+        alert("Ihr Warenkorb ist leer!");
         return;
     }
 
@@ -491,7 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
             <div class="basket-drawer" id="basket-drawer">
                 <div class="basket-header">
-                    <h3>Your Basket</h3>
+                    <h3>Ihr Warenkorb</h3>
                     <button class="close-basket" onclick="toggleBasket(false)">✕</button>
                 </div>
                 <div class="basket-items" id="basket-items">
@@ -499,10 +499,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="basket-footer">
                     <div class="basket-total">
-                        <span>Total</span>
+                        <span>Gesamt</span>
                         <span id="basket-total-amount">€0.00</span>
                     </div>
-                    <button class="btn checkout-btn" onclick="checkout()">Check Out</button>
+                    <button class="btn checkout-btn" onclick="checkout()">Zur Kasse</button>
                 </div>
             </div>
         `;
@@ -513,9 +513,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const modalHTML = `
             <div class="combo-modal" id="combo-modal">
                 <div class="modal-content">
-                    <h2 id="combo-title" class="modal-title">Configure Combo</h2>
+                    <h2 id="combo-title" class="modal-title">Combo konfigurieren</h2>
                     <div class="select-group">
-                        <label class="select-label">Choose Burger</label>
+                        <label class="select-label">Burger wählen</label>
                         <select id="combo-burger" class="select-input">
                             <option>Goat Byte Original</option>
                             <option>Spicy Goat Byte</option>
@@ -525,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </select>
                     </div>
                     <div class="select-group">
-                        <label class="select-label">Choose Side</label>
+                        <label class="select-label">Beilage wählen</label>
                         <select id="combo-side" class="select-input">
                             <option>Classic Fries</option>
                             <option>Peri Peri Fries</option>
@@ -537,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </select>
                     </div>
                     <div class="select-group">
-                        <label class="select-label">Choose Drink</label>
+                        <label class="select-label">Getränk wählen</label>
                         <select id="combo-drink" class="select-input">
                             <option>Coca-Cola</option>
                             <option>Fanta</option>
@@ -546,8 +546,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </select>
                     </div>
                     <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                        <button class="btn btn-outline" style="flex: 1" onclick="closeComboModal()">Cancel</button>
-                        <button class="btn" style="flex: 1" onclick="confirmCombo()">Add to Basket</button>
+                        <button class="btn btn-outline" style="flex: 1" onclick="closeComboModal()">Abbrechen</button>
+                        <button class="btn" style="flex: 1" onclick="confirmCombo()">Zum Warenkorb hinzufügen</button>
                     </div>
                 </div>
             </div>
@@ -559,12 +559,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const extrasHTML = `
             <div class="combo-modal" id="burger-extras-modal" style="z-index: 10001;">
                 <div class="modal-content">
-                    <h2 class="modal-title">🍔 Customise Your Burger</h2>
-                    <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 1.02rem;">Want to make it even better? Add extras to your order:</p>
+                    <h2 class="modal-title">🍔 Passen Sie Ihren Burger an</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 1.02rem;">Möchten Sie ihn noch besser machen? Fügen Sie Extras hinzu:</p>
                     <div class="extras-list">
                         <label class="extra-item">
                             <div class="extra-info">
-                                <span class="extra-name">🧀 Extra Cheese</span>
+                                <span class="extra-name">🧀 Extra Käse</span>
                                 <span class="extra-price">+€1.07</span>
                             </div>
                             <input type="checkbox" class="extra-checkbox" data-name="Extra Cheese" data-price="1.07">
@@ -578,22 +578,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         </label>
                         <label class="extra-item">
                             <div class="extra-info">
-                                <span class="extra-name">🫙 Extra Sauce</span>
+                                <span class="extra-name">🫙 Extra Soße</span>
                                 <span class="extra-price">+€0.54</span>
                             </div>
                             <input type="checkbox" class="extra-checkbox" data-name="Extra Sauce" data-price="0.54">
                         </label>
                         <label class="extra-item">
                             <div class="extra-info">
-                                <span class="extra-name">🌶️ Make it Spicy</span>
+                                <span class="extra-name">🌶️ Machen Sie es scharf 🌶️</span>
                                 <span class="extra-price">+€0.54</span>
                             </div>
                             <input type="checkbox" class="extra-checkbox" data-name="Make it Spicy" data-price="0.54">
                         </label>
                     </div>
                     <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                        <button class="btn btn-outline" style="flex: 1" onclick="skipExtras()">Skip Extras</button>
-                        <button class="btn" id="confirm-extras-btn" style="flex: 1" onclick="confirmBurgerWithExtras()">Add to Basket</button>
+                        <button class="btn btn-outline" style="flex: 1" onclick="skipExtras()">Extras überspringen</button>
+                        <button class="btn" id="confirm-extras-btn" style="flex: 1" onclick="confirmBurgerWithExtras()">Zum Warenkorb hinzufügen</button>
                     </div>
                 </div>
             </div>
@@ -605,27 +605,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const friesModalHTML = `
             <div class="combo-modal" id="fries-selection-modal" style="z-index: 10001;">
                 <div class="modal-content">
-                    <h2 class="modal-title">🍟 Choose Your Fries</h2>
-                    <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 1.02rem;">Would you like our classic house fries or sweet potato fries?</p>
+                    <h2 class="modal-title">🍟 Wählen Sie Ihre Pommes</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 1.02rem;">Möchten Sie unsere klassischen Hauspommes oder Süßkartoffelpommes?</p>
                     <div class="extras-list">
                         <label class="extra-item" style="cursor: pointer;">
                             <div class="extra-info">
-                                <span class="extra-name">Classic Fries</span>
+                                <span class="extra-name">Klassische Pommes</span>
                                 <span class="extra-price">€2.66</span>
                             </div>
                             <input type="radio" name="fries-type" id="fries-normal-radio" value="normal" checked>
                         </label>
                         <label class="extra-item" style="cursor: pointer;">
                             <div class="extra-info">
-                                <span class="extra-name">Sweet Potato Fries</span>
+                                <span class="extra-name">Süßkartoffelpommes</span>
                                 <span class="extra-price">€3.20</span>
                             </div>
                             <input type="radio" name="fries-type" id="fries-sweet-radio" value="sweet">
                         </label>
                     </div>
                     <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                        <button class="btn btn-outline" style="flex: 1" onclick="closeFriesSelectionModal()">Cancel</button>
-                        <button class="btn" id="confirm-fries-btn" style="flex: 1" onclick="confirmFriesSelection()">Add to Basket</button>
+                        <button class="btn btn-outline" style="flex: 1" onclick="closeFriesSelectionModal()">Abbrechen</button>
+                        <button class="btn" id="confirm-fries-btn" style="flex: 1" onclick="confirmFriesSelection()">Zum Warenkorb hinzufügen</button>
                     </div>
                 </div>
             </div>
