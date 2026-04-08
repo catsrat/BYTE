@@ -1,20 +1,21 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>BYTE - Built Different</title>
-<meta content="Premium smash burgers made fresh. Built for real cravings." name="description"/>
-<!-- CSS -->
-<link href="css/style.css" rel="stylesheet"/>
-<!-- PWA Meta Tags -->
-<link href="manifest.json?v=2" rel="manifest"/>
-<meta content="#ff8c00" name="theme-color"/>
-<link href="images/app-icon.png" rel="apple-touch-icon"/>
-<meta content="yes" name="apple-mobile-web-app-capable"/>
-<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
-<link rel="icon" type="image/png" href="images/logo.png"/>
-<style>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>BYTE - Built Different</title>
+    <meta content="Premium smash burgers made fresh. Built for real cravings." name="description" />
+    <!-- CSS -->
+    <link href="css/style.css" rel="stylesheet" />
+    <!-- PWA Meta Tags -->
+    <link href="manifest.json?v=2" rel="manifest" />
+    <meta content="#ff8c00" name="theme-color" />
+    <link href="images/app-icon.png" rel="apple-touch-icon" />
+    <meta content="yes" name="apple-mobile-web-app-capable" />
+    <meta content="black-translucent" name="apple-mobile-web-app-status-bar-style" />
+    <link rel="icon" type="image/png" href="images/logo.png" />
+    <style>
         /* Home specific styles */
         .hero {
             position: relative;
@@ -28,7 +29,8 @@
             background-image: linear-gradient(to bottom, rgba(9, 7, 5, 0.7), rgba(9, 7, 5, 1)), url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');
             background-size: cover;
             background-position: center;
-            margin-top: -95px; /* Offset for fixed header */
+            margin-top: -95px;
+            /* Offset for fixed header */
         }
 
         .hero-content {
@@ -58,7 +60,7 @@
             margin-bottom: 2rem;
             font-weight: 300;
         }
-        
+
         .hero .btn {
             font-size: 1.25rem;
             padding: 1rem 3rem;
@@ -103,13 +105,13 @@
             text-transform: uppercase;
             color: #fff;
         }
-        
+
         .simple-card p {
             color: var(--text-muted);
             margin-bottom: 1.5rem;
             font-size: 1rem;
         }
-        
+
         .simple-card .price {
             font-size: 1.25rem;
             color: var(--primary);
@@ -118,7 +120,7 @@
 
         .cta-section {
             padding: 8rem 0;
-            background: linear-gradient(0deg, rgba(10,8,5,1) 0%, rgba(10,8,5,0) 100%);
+            background: linear-gradient(0deg, rgba(10, 8, 5, 1) 0%, rgba(10, 8, 5, 0) 100%);
             text-align: center;
             position: relative;
         }
@@ -128,7 +130,7 @@
             margin-bottom: 1.5rem;
             text-transform: uppercase;
         }
-        
+
         /* Mobile overrides */
         @media (max-width: 768px) {
             .hero {
@@ -137,184 +139,198 @@
         }
     </style>
 </head>
+
 <body>
-<header>
-<nav class="container">
-<a class="logo" href="index.html"><img alt="BYTE Burgers" class="logo-img" src="images/logo-white.png"/></a>
-<ul class="nav-links">
-<li><a href="index.html">Heim</a></li>
-<li><a href="menu.html">Speisekarte</a></li>
-<li><a href="franchise.html">Franchise</a></li>
-</ul>
-<div class="hamburger" id="mobile-menu">
-<span></span>
-<span></span>
-<span></span>
-</div>
-<a class="btn" href="menu.html" translate="no">Jetzt bestellen</a>
-</nav>
-</header>
-<main>
-<section class="hero gs_reveal">
-<div class="hero-content">
-<h1 class="text-gradient">Smashen<br/>Schmelzen<br/>Beißen</h1>
-<p>Premium-Burger frisch zubereitet.Gebaut für echte Gelüste.</p>
-<div style="margin-bottom: 2rem;">
-<img alt="100% Halal Certified" data-pin-nopin="true" src="images/halal-badge.png" style="height: 80px; width: auto; max-width: 100%;"/>
-</div>
-<div class="hero-btns" style="display: flex; gap: 1rem;">
-<a class="btn" href="menu.html">Jetzt bestellen</a>
-</div>
-</div>
-</section>
-<!-- Video Showcase directly below Hero -->
-<section class="video-showcase gs_reveal_up">
-<div class="container" style="max-width: 1000px; position: relative;">
-<video autoplay="" loop="" muted="" playsinline="" style="width: 100%; border-radius: 20px; display: block; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
-<source src="assets/promo.mp4" type="video/mp4"/>
+    <header>
+        <nav class="container">
+            <a class="logo" href="index.html"><img alt="BYTE Burgers" class="logo-img"
+                    src="images/logo-white.png" /></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Heim</a></li>
+                <li><a href="menu.html">Speisekarte</a></li>
+                <li><a href="franchise.html">Franchise</a></li>
+            </ul>
+            <div class="hamburger" id="mobile-menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <a class="btn" href="menu.html" translate="no">Jetzt bestellen</a>
+        </nav>
+    </header>
+    <main>
+        <section class="hero gs_reveal">
+            <div class="hero-content">
+                <h1 class="text-gradient">Smashen<br />Schmelzen<br />Beißen</h1>
+                <p>Premium-Burger frisch vorbereitet.Einzigartiger Genuss.</p>
+                <div style="margin-bottom: 2rem;">
+                    <img alt="100% Halal Certified" data-pin-nopin="true" src="images/halal-badge.png"
+                        style="height: 80px; width: auto; max-width: 100%;" />
+                </div>
+                <div class="hero-btns" style="display: flex; gap: 1rem;">
+                    <a class="btn" href="menu.html">Jetzt bestellen</a>
+                </div>
+            </div>
+        </section>
+        <!-- Video Showcase directly below Hero -->
+        <section class="video-showcase gs_reveal_up">
+            <div class="container" style="max-width: 1000px; position: relative;">
+                <video autoplay="" loop="" muted="" playsinline=""
+                    style="width: 100%; border-radius: 20px; display: block; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
+                    <source src="assets/promo.mp4" type="video/mp4" />
                     Ihr Browser unterstützt das Video-Tag nicht.
                 </video>
-<img alt="Halal Certified" src="images/halal-badge.png" style="position: absolute; bottom: 20px; right: 35px; width: 40px; height: auto; pointer-events: none; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));"/>
-</div>
-</section>
-<!-- Minimal Menu Preview -->
-<section class="home-menu container gs_reveal">
-<div style="text-align: center; margin-bottom: 2rem;">
-<h2 style="font-size: 3rem; text-transform: uppercase;">Das Menü</h2>
-</div>
-<div class="home-menu-grid">
-<div class="simple-card gs_reveal_up">
-<h3>Ziegenbyte-Original</h3>
-<p>Saftiges Ziegenfrikadellen, typische Gewürze.</p>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<span class="price">€7.48</span>
-<a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
-</div>
-</div>
-<div class="simple-card gs_reveal_up" style="animation-delay: 0.1s">
-<h3>Würziges Ziegenbyte</h3>
-<p>Ziegenpastetchen, Jalapeños und Chilisauce.</p>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<span class="price">€8.01</span>
-<a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
-</div>
-</div>
-<div class="simple-card gs_reveal_up" style="animation-delay: 0.2s">
-<h3>Trüffel-Ziegen-Byte</h3>
-<p>Premium-Ziegenpastetchen, Trüffel-Mayonnaise.</p>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<span class="price">€8.55</span>
-<a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
-</div>
-</div>
-<div class="simple-card gs_reveal_up" style="animation-delay: 0.3s">
-<h3>Byte-Klassiker</h3>
-<p>Unser charakteristischer Smash-Beef-Burger.</p>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<span class="price">€6.41</span>
-<a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
-</div>
-</div>
-<div class="simple-card gs_reveal_up">
-<h3>Doppelbyte</h3>
-<p>Doppelt zerkleinertes Premium-Rindfleisch.</p>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<span class="price">€8.01</span>
-<a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
-</div>
-</div>
-<div class="simple-card gs_reveal_up" style="animation-delay: 0.1s">
-<h3>Rauchiges BBQ-Byte</h3>
-<p>Knuspriger Speck, Käse und BBQ-Sauce.</p>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<span class="price">€7.48</span>
-<a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
-</div>
-</div>
-<div class="simple-card gs_reveal_up" style="animation-delay: 0.2s">
-<h3>Knuspriges Hähnchen-Byte</h3>
-<p>Gebratenes Hähnchen und typische Sauce.</p>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<span class="price">€5.87</span>
-<a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
-</div>
-</div>
-<div class="simple-card gs_reveal_up" style="animation-delay: 0.3s">
-<h3>Würziges Hühnchen-Byte</h3>
-<p>Scharf gebratenes Hähnchen und Mayo.</p>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<span class="price">€6.41</span>
-<a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
-</div>
-</div>
-<div class="simple-card gs_reveal_up">
-<h3>Grünes Byte (Vegan)</h3>
-<p>Pflanzlicher Patty und veganer Käse.</p>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<span class="price">€5.87</span>
-<a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
-</div>
-</div>
-<div class="simple-card gs_reveal_up" style="animation-delay: 0.1s">
-<h3>Falafel-Byte</h3>
-<p>Knuspriges Falafel-Patty und Tahini.</p>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<span class="price">€6.41</span>
-<a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
-</div>
-</div>
-<div class="simple-card gs_reveal_up" style="animation-delay: 0.2s; border-color: var(--primary);">
-<h3>Die Combo</h3>
-<p>Jeder Burger + Beilagen + Getränk.</p>
-<div style="display: flex; justify-content: space-between; align-items: center;">
-<span class="price">+€4.27</span>
-<a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
-</div>
-</div>
-</div>
-</section>
-<section class="cta-section gs_reveal">
-<div class="container cta-content">
-<h2 class="text-gradient">BYTE.Anders gebaut.</h2>
-<p class="text-muted" style="margin-bottom: 3rem; font-size: 1.34rem;">Erleben Sie den neuen Standard im Fast Food.</p>
-<a class="btn" href="menu.html" style="font-size: 1.34rem; padding: 1.34rem 3rem;">Vollständiges Menü anzeigen</a>
-</div>
-</section>
-</main>
-<footer>
-<div class="container footer-content">
-<div class="footer-col" style="flex: 2;">
-<a class="logo" href="index.html" style="margin-bottom: 1rem; display: inline-block;"><img alt="BYTE Burgers" class="logo-img" src="images/logo-white.png"/></a>
-<p style="font-size: 1.5rem; color: #fff; font-weight: 800; margin-bottom: 1rem;">BYTE.Anders gebaut.</p>
-<p>Weyerstraße 284A, 42719 Solingen</p>
-<div style="display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--primary); color: var(--text-main); background: rgba(255,127,0,0.1); padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 0.91rem; margin-top: 15px;">
-<span style="color: var(--primary);">☪️</span> 100 % HALAL <span style="font-size: 1rem;">حلال</span>
-</div>
-</div>
-<div class="footer-col">
-<h3>Optionen</h3>
-<ul style="list-style:none; display:flex; flex-direction:column; gap:0.5rem;">
-<li><a href="menu.html" style="color:var(--text-muted); text-decoration:none;">Lieferung bestellen</a></li>
-<li><a href="menu.html" style="color:var(--text-muted); text-decoration:none;">Abholen</a></li>
-</ul>
-</div>
-<div class="footer-col">
-<h3>Verbinden</h3>
-<p>Sozial: <span class="text-primary">@byteburgers</span></p>
-<div class="social-links">
-<a href="#">ICH G</a>
-<a href="#">TW</a>
-</div>
-</div>
-</div>
-<div class="footer-bottom" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 2rem; margin-top: 2rem; text-align: center; color: var(--text-muted);">
-<p>© 2026 BYTE.Alle Rechte vorbehalten.</p>
-</div>
-</footer>
-<!-- GSAP & VanillaTilt -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
-<script src="js/main.js"></script>
+                <img alt="Halal Certified" src="images/halal-badge.png"
+                    style="position: absolute; bottom: 20px; right: 35px; width: 40px; height: auto; pointer-events: none; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));" />
+            </div>
+        </section>
+        <!-- Minimal Menu Preview -->
+        <section class="home-menu container gs_reveal">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2 style="font-size: 3rem; text-transform: uppercase;">Das Menü</h2>
+            </div>
+            <div class="home-menu-grid">
+                <div class="simple-card gs_reveal_up">
+                    <h3>Ziegenbyte-Original</h3>
+                    <p>Saftiges Ziegenfrikadellen, typische Gewürze.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="price">€7.48</span>
+                        <a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
+                    </div>
+                </div>
+                <div class="simple-card gs_reveal_up" style="animation-delay: 0.1s">
+                    <h3>Würziges Ziegenbyte</h3>
+                    <p>Ziegenpastetchen, Jalapeños und Chilisauce.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="price">€8.01</span>
+                        <a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
+                    </div>
+                </div>
+                <div class="simple-card gs_reveal_up" style="animation-delay: 0.2s">
+                    <h3>Trüffel-Ziegen-Byte</h3>
+                    <p>Premium-Ziegenpastetchen, Trüffel-Mayonnaise.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="price">€8.55</span>
+                        <a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
+                    </div>
+                </div>
+                <div class="simple-card gs_reveal_up" style="animation-delay: 0.3s">
+                    <h3>Byte-Klassiker</h3>
+                    <p>Unser charakteristischer Smash-Beef-Burger.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="price">€6.41</span>
+                        <a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
+                    </div>
+                </div>
+                <div class="simple-card gs_reveal_up">
+                    <h3>Doppelbyte</h3>
+                    <p>Doppelt zerkleinertes Premium-Rindfleisch.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="price">€8.01</span>
+                        <a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
+                    </div>
+                </div>
+                <div class="simple-card gs_reveal_up" style="animation-delay: 0.1s">
+                    <h3>Rauchiges BBQ-Byte</h3>
+                    <p>Knuspriger Speck, Käse und BBQ-Sauce.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="price">€7.48</span>
+                        <a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
+                    </div>
+                </div>
+                <div class="simple-card gs_reveal_up" style="animation-delay: 0.2s">
+                    <h3>Knuspriges Hähnchen-Byte</h3>
+                    <p>Gebratenes Hähnchen und typische Sauce.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="price">€5.87</span>
+                        <a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
+                    </div>
+                </div>
+                <div class="simple-card gs_reveal_up" style="animation-delay: 0.3s">
+                    <h3>Würziges Hühnchen-Byte</h3>
+                    <p>Scharf gebratenes Hähnchen und Mayo.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="price">€6.41</span>
+                        <a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
+                    </div>
+                </div>
+                <div class="simple-card gs_reveal_up">
+                    <h3>Grünes Byte (Vegan)</h3>
+                    <p>Pflanzlicher Patty und veganer Käse.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="price">€5.87</span>
+                        <a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
+                    </div>
+                </div>
+                <div class="simple-card gs_reveal_up" style="animation-delay: 0.1s">
+                    <h3>Falafel-Byte</h3>
+                    <p>Knuspriges Falafel-Patty und Tahini.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="price">€6.41</span>
+                        <a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
+                    </div>
+                </div>
+                <div class="simple-card gs_reveal_up" style="animation-delay: 0.2s; border-color: var(--primary);">
+                    <h3>Die Combo</h3>
+                    <p>Jeder Burger + Beilagen + Getränk.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="price">+€4.27</span>
+                        <a class="btn" href="menu.html" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Bestellen</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="cta-section gs_reveal">
+            <div class="container cta-content">
+                <h2 class="text-gradient">BYTE.Anders gebaut.</h2>
+                <p class="text-muted" style="margin-bottom: 3rem; font-size: 1.34rem;">Erleben Sie den neuen Standard im
+                    Fast Food.</p>
+                <a class="btn" href="menu.html" style="font-size: 1.34rem; padding: 1.34rem 3rem;">Vollständiges Menü
+                    anzeigen</a>
+            </div>
+        </section>
+    </main>
+    <footer>
+        <div class="container footer-content">
+            <div class="footer-col" style="flex: 2;">
+                <a class="logo" href="index.html" style="margin-bottom: 1rem; display: inline-block;"><img
+                        alt="BYTE Burgers" class="logo-img" src="images/logo-white.png" /></a>
+                <p style="font-size: 1.5rem; color: #fff; font-weight: 800; margin-bottom: 1rem;">BYTE.Anders gebaut.
+                </p>
+                <p>Weyerstraße 284A, 42719 Solingen</p>
+                <div
+                    style="display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--primary); color: var(--text-main); background: rgba(255,127,0,0.1); padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 0.91rem; margin-top: 15px;">
+                    <span style="color: var(--primary);">☪️</span> 100 % HALAL <span
+                        style="font-size: 1rem;">حلال</span>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h3>Optionen</h3>
+                <ul style="list-style:none; display:flex; flex-direction:column; gap:0.5rem;">
+                    <li><a href="menu.html" style="color:var(--text-muted); text-decoration:none;">Lieferung
+                            bestellen</a></li>
+                    <li><a href="menu.html" style="color:var(--text-muted); text-decoration:none;">Abholen</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h3>Verbinden</h3>
+                <p>Sozial: <span class="text-primary">@byteburgers</span></p>
+                <div class="social-links">
+                    <a href="#">ICH G</a>
+                    <a href="#">TW</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom"
+            style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 2rem; margin-top: 2rem; text-align: center; color: var(--text-muted);">
+            <p>© 2026 BYTE.Alle Rechte vorbehalten.</p>
+        </div>
+    </footer>
+    <!-- GSAP & VanillaTilt -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+    <script src="js/main.js"></script>
 </body>
+
 </html>
