@@ -324,8 +324,8 @@
                 keepalive: true
             }).catch(() => {});
 
-            // Redirect immediately — don't wait for formsubmit's response
-            window.location.href = 'thanks.html';
+            // Redirect immediately — timestamp busts any cached version of thanks.html
+            window.location.href = 'thanks.html?v=' + Date.now();
         }
 
         function closeFulfillmentModal() {}  // kept for safety, no longer used
