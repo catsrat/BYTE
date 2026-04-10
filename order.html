@@ -334,15 +334,22 @@
             const orderId = 'BYT' + Math.random().toString(36).substr(2, 5).toUpperCase();
             sessionStorage.setItem('byteOrderId', orderId);
 
-            // Await Firebase write so the order reaches the DB before we navigate away
-            if (orderType === 'DELIVERY') {
-                try {
-                    await db.ref('orders/' + orderId).set({
-                        status: 'confirmed',
-                        created_at: Date.now()
-                    });
-                } catch(e) {}
-            }
+            // Save full order data for ALL order types (admin needs to see everything)
+            try {
+                const form2 = document.getElementById('checkout-form');
+                await db.ref('orders/' + orderId).set({
+                    status: 'confirmed',
+                    created_at: Date.now(),
+                    type: orderType,
+                    name: form2.querySelector('[name="name"]')?.value || '',
+                    phone: form2.querySelector('[name="phone"]')?.value || '',
+                    address: document.getElementById('address-field')?.value || '',
+                    items: document.getElementById('items-field')?.value || '',
+                    payment: document.getElementById('payment-field')?.value || '',
+                    notes: form2.querySelector('[name="notes"]')?.value || '',
+                    total: parseFloat(document.getElementById('final-total-display')?.textContent?.replace('€','')) || 0
+                });
+            } catch(e) {}
 
             const formData = new FormData(form);
             formData.append('Order_ID', '#' + orderId);
