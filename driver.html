@@ -249,7 +249,6 @@
         if (getPin() === DRIVER_PIN) {
             document.getElementById('pin-screen').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
-            cleanupOldOrders();
             listenOrders();
         } else {
             document.getElementById('pin-error').textContent = 'Wrong PIN — try again.';
@@ -341,18 +340,6 @@
         db.ref('orders/' + orderId).update({ status:'delivered', driver_lat:null, driver_lng:null });
     }
 
-    // ── CLEANUP ───────────────────────────────
-    // Only remove orders older than 7 days — keeps analytics data intact
-    function cleanupOldOrders() {
-        const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-        db.ref('orders').once('value', snap => {
-            (snap.val() ? Object.entries(snap.val()) : []).forEach(([id, o]) => {
-                if (o.created_at < cutoff) {
-                    db.ref('orders/' + id).remove();
-                }
-            });
-        });
-    }
 </script>
 </body>
 </html>
