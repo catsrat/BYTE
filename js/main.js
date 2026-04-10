@@ -110,10 +110,11 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 // Shopping Basket Logic
-// Force wipe corrupt legacy carts from v32 
-if (!localStorage.getItem('byteCartV34_migrated')) {
+// Force wipe carts with old drink prices (pre-v35 fix)
+if (!localStorage.getItem('byteCartV35_migrated')) {
     localStorage.removeItem('byteCart');
-    localStorage.setItem('byteCartV34_migrated', 'true');
+    localStorage.removeItem('byteCartV34_migrated');
+    localStorage.setItem('byteCartV35_migrated', 'true');
 }
 
 let cart = JSON.parse(localStorage.getItem('byteCart')) || [];
@@ -147,7 +148,7 @@ const menuData = {
 // Combo Selection Logic
 const referencePrices = {
     // Drinks
-    'Coca-Cola': 2.97, 'Fanta': 2.97, 'Sprite': 2.97, 'Mineral Water': 4.17,
+    'Coca-Cola': 2.68, 'Fanta': 2.68, 'Sprite': 2.68, 'Sodas': 2.68, 'Mineral Water': 2.68,
     // Sides
     'Classic Fries': 2.66, 'Peri Peri Fries': 3.20, 'Sweet Potato Fries': 3.20,
     'Cheese Melt Fries': 4.27, 'BBQ Beef Loaded Fries': 5.34, 'GOAT Loaded Fries': 5.87,
