@@ -311,7 +311,8 @@
     if (orderType === 'DELIVERY' && orderId) {
         document.getElementById('tracking-view').style.display = 'flex';
         document.getElementById('order-ref').innerHTML = 'Order <span>#' + orderId + '</span>';
-        initTracking(orderId);
+        // Double rAF: ensures browser finishes layout before Leaflet measures the container
+        requestAnimationFrame(() => requestAnimationFrame(() => initTracking(orderId)));
     } else {
         document.getElementById('simple-view').style.display = 'block';
     }
@@ -340,8 +341,10 @@
 
         map.scrollWheelZoom.disable();
 
-        // Leaflet can't measure a hidden container — force recalculation after render
-        setTimeout(() => map.invalidateSize(), 300);
+        // Fire invalidateSize multiple times to guarantee tiles render correctly
+        setTimeout(() => map.invalidateSize(), 100);
+        setTimeout(() => map.invalidateSize(), 500);
+        setTimeout(() => map.invalidateSize(), 1500);
     }
 
     // ── DRIVER MARKER ──────────────────────────
@@ -390,9 +393,9 @@
 
     // ── STATUS UI ──────────────────────────────
     const STATUSES = {
-        confirmed:  { badge:'badge-confirmed',  label:'⏳ Order Confirmed', steps:['done','current','',''] },
-        on_the_way: { badge:'badge-on_the_way', label:'🛵 On the Way!',     steps:['done','done','current',''] },
-        delivered:  { badge:'badge-delivered',  label:'✅ Delivered!',      steps:['done','done','done','done'] }
+        confirmed:  { badge:'badge-confirmed',  label:'⏳ Order Confirmed', steps:['done','current','',''],     hidePill: false },
+        on_the_way: { badge:'badge-on_the_way', label:'🛵 On the Way!',     steps:['done','done','current',''], hidePill: true  },
+        delivered:  { badge:'badge-delivered',  label:'✅ Delivered!',      steps:['done','done','done','done'], hidePill: true  }
     };
     const STEP_IDS = ['step-confirmed','step-preparing','step-on_the_way','step-delivered'];
 
@@ -404,6 +407,7 @@
         STEP_IDS.forEach((id, i) => {
             document.getElementById(id).className = 'step-row ' + (cfg.steps[i] || '');
         });
+        if (cfg.hidePill) document.getElementById('map-pill').style.opacity = '0';
     }
 </script>
 <script src="js/main.js"></script>
