@@ -203,8 +203,16 @@
 <h1 class="text-gradient gs_reveal_text">Unsere Speisekarte</h1>
 <p class="text-muted" style="font-size: 1.2rem; max-width: 600px; margin: 0 auto;">Frisch zubereitete Zutaten aus der Region sorgen für das ultimative Burger-Erlebnis.Nehmen Sie ein BYTE.</p>
 </section>
-<!-- BYTE Burgers -->
-<section class="menu-section container relative" id="burgers">
+<!-- Dynamic menu sections loaded from Firebase -->
+<div id="firebase-menu">
+<div style="text-align:center;padding:4rem 1rem;color:var(--text-muted);font-size:1rem">
+    <div style="font-size:2rem;margin-bottom:1rem">🍔</div>Speisekarte wird geladen…
+</div>
+</div>
+
+<!-- KEEP: static combos section below -->
+<!-- BYTE Burgers (HIDDEN — replaced by firebase-menu above) -->
+<section class="menu-section container relative" id="burgers" style="display:none">
 <div class="menu-title-wrap gs_reveal">
 <div class="menu-title-bg">BYTE Burger</div>
 </div>
@@ -295,8 +303,8 @@
 </div>
 </div>
 </section>
-<!-- Veg Burgers -->
-<section class="menu-section container relative" id="veg">
+<!-- Veg Burgers (HIDDEN — merged into firebase-menu Burgers) -->
+<section class="menu-section container relative" id="veg" style="display:none">
 <div class="menu-title-wrap gs_reveal">
 <div class="menu-title-bg" style="transform: rotate(2deg);">Gemüseburger</div>
 </div>
@@ -324,8 +332,8 @@
 </div>
 </div>
 </section>
-<!-- Sides -->
-<section class="menu-section container relative" id="sides">
+<!-- Sides (HIDDEN) -->
+<section class="menu-section container relative" id="sides" style="display:none">
 <div class="menu-title-wrap gs_reveal">
 <div class="menu-title-bg" style="transform: rotate(-1deg);">Geladene Pommes und Beilagen</div>
 </div>
@@ -424,8 +432,8 @@
 </div>
 </div>
 </section>
-<!-- Street Classics -->
-<section class="menu-section container relative" id="street-classics">
+<!-- Street Classics (HIDDEN) -->
+<section class="menu-section container relative" id="street-classics" style="display:none">
 <div class="menu-title-wrap gs_reveal">
 <div class="menu-title-bg" style="transform: rotate(-1deg);">Straßenklassiker</div>
 </div>
@@ -493,8 +501,8 @@
 </div>
 </div>
 </section>
-<!-- Drinks -->
-<section class="menu-section container relative" id="drinks">
+<!-- Drinks (HIDDEN) -->
+<section class="menu-section container relative" id="drinks" style="display:none">
 <div class="menu-title-wrap gs_reveal">
 <div class="menu-title-bg" style="transform: rotate(-1.5deg);">Getränke</div>
 </div>
@@ -551,8 +559,8 @@
 </div>
 </div>
 </section>
-<!-- Extras -->
-<section class="menu-section container relative" id="extras">
+<!-- Extras (HIDDEN) -->
+<section class="menu-section container relative" id="extras" style="display:none">
 <div class="menu-title-wrap gs_reveal">
 <div class="menu-title-bg" style="transform: rotate(1.5deg);">Extras und Add-ons</div>
 </div>
@@ -643,6 +651,118 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="js/main.js"></script>
+<script>
+// ── DYNAMIC MENU FROM FIREBASE ────────────────────────────────────────────
+(function() {
+    const firebaseConfig = {
+        apiKey: "AIzaSyCfAfJkP9EsxPR1Zp7J8jctgSoxIfM_gbE",
+        authDomain: "byte-34c84.firebaseapp.com",
+        databaseURL: "https://byte-34c84-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "byte-34c84",
+        storageBucket: "byte-34c84.firebasestorage.app",
+        messagingSenderId: "700610883011",
+        appId: "1:700610883011:web:b7e6f16233b67d7976e176"
+    };
+
+    // Only init if not already done by main.js
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const SECTION_CONFIG = {
+        Burgers:  { title: 'BYTE Burger',                    rotation: '-2deg',  id: 'fb-burgers'  },
+        Sides:    { title: 'Geladene Pommes & Beilagen',     rotation: '-1deg',  id: 'fb-sides'    },
+        Specials: { title: 'Straßenklassiker',               rotation: '-1deg',  id: 'fb-specials' },
+        Drinks:   { title: 'Getränke',                       rotation: '-1.5deg',id: 'fb-drinks'   },
+        Extras:   { title: 'Extras & Add-ons',               rotation: '1.5deg', id: 'fb-extras'   },
+    };
+    const SECTION_ORDER = ['Burgers','Sides','Specials','Drinks','Extras'];
+
+    function getAddToCartFn(item, section) {
+        if (section === 'Burgers') return `addBurgerToCart('${esc(item.name)}', '€${item.price.toFixed(2)}')`;
+        if (item.name === 'Classic Fries') return `openFriesSelection('${esc(item.name)}', '€${item.price.toFixed(2)}')`;
+        return `addToCart('${esc(item.name)}', '€${item.price.toFixed(2)}')`;
+    }
+
+    function esc(s) { return (s||'').replace(/'/g, "\\'"); }
+
+    function soldOutOverlay() {
+        return `<div style="position:absolute;inset:0;background:rgba(0,0,0,0.55);border-radius:20px;
+                    display:flex;align-items:center;justify-content:center;z-index:10">
+                    <span style="background:#ff4444;color:#fff;font-weight:900;font-size:.85rem;
+                        text-transform:uppercase;letter-spacing:2px;padding:.4rem 1.2rem;border-radius:20px">
+                        Ausverkauft
+                    </span>
+                </div>`;
+    }
+
+    function renderItem(item, section) {
+        const fn      = getAddToCartFn(item, section);
+        const soldOut = !item.available;
+        return `
+        <div class="menu-item-card tilt-card" style="position:relative">
+            ${soldOut ? soldOutOverlay() : ''}
+            <div class="menu-item-inner">
+                <div class="item-header">
+                    <div class="item-name">${item.emoji ? item.emoji + ' ' : ''}${item.name}</div>
+                    <div class="item-price">€${(item.price||0).toFixed(2)}</div>
+                </div>
+                <p class="item-desc">${item.desc||''}</p>
+                <button class="btn btn-outline" onclick="${fn}"
+                    style="margin-top:1rem;padding:.5rem 1rem;width:100%"
+                    ${soldOut ? 'disabled style="margin-top:1rem;padding:.5rem 1rem;width:100%;opacity:.4;cursor:not-allowed"' : ''}>
+                    ${soldOut ? 'Ausverkauft' : 'Zum Warenkorb hinzufügen'}
+                </button>
+            </div>
+        </div>`;
+    }
+
+    function renderSection(section, items) {
+        const cfg = SECTION_CONFIG[section];
+        if (!cfg || !items.length) return '';
+        return `
+        <section class="menu-section container relative" id="${cfg.id}">
+            <div class="menu-title-wrap">
+                <div class="menu-title-bg" style="transform:rotate(${cfg.rotation})">${cfg.title}</div>
+            </div>
+            <div class="menu-grid">
+                ${items.map(item => renderItem(item, section)).join('')}
+            </div>
+        </section>`;
+    }
+
+    db.ref('menu').on('value', snap => {
+        const data = snap.val();
+        const container = document.getElementById('firebase-menu');
+        if (!data) {
+            container.innerHTML = '<div style="text-align:center;padding:4rem;color:#666">Speisekarte wird geladen…</div>';
+            return;
+        }
+
+        // Group by section preserving order
+        const sections = {};
+        SECTION_ORDER.forEach(s => { sections[s] = []; });
+        Object.values(data).forEach(item => {
+            const s = item.section || 'Extras';
+            if (!sections[s]) sections[s] = [];
+            sections[s].push(item);
+        });
+
+        container.innerHTML = SECTION_ORDER
+            .filter(s => sections[s] && sections[s].length)
+            .map(s => renderSection(s, sections[s]))
+            .join('');
+
+        // Re-init VanillaTilt on new cards
+        if (typeof VanillaTilt !== 'undefined') {
+            VanillaTilt.init(container.querySelectorAll('.tilt-card'), {
+                max: 8, speed: 400, glare: true, 'max-glare': 0.15
+            });
+        }
+    });
+})();
+</script>
 </body>
 </html>
