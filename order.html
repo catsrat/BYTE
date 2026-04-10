@@ -285,6 +285,7 @@
                     sessionStorage.setItem('byteOrderType', 'pickup');
                     showUpsell();
                 } else {
+                    if (!checkMinOrder()) return;
                     document.getElementById('cash-modal').classList.add('active');
                 }
             });
@@ -424,18 +425,84 @@
             showUpsell();
         }
 
+        // ── MIN ORDER CHECK ──────────────────────────────────────────────────
+        let minOrderAmount = 10; // default, overridden by Firebase
+        firebase.database().ref('settings/minOrder').once('value', snap => {
+            if (snap.val()) minOrderAmount = parseFloat(snap.val());
+        });
+
+        function checkMinOrder() {
+            const orderType = document.getElementById('order-type-field').value;
+            if (orderType !== 'delivery') return true; // pickup has no minimum
+            const total = parseFloat(document.getElementById('final-total-display')?.textContent?.replace('€','')) || 0;
+            if (total < minOrderAmount) {
+                const needed = (minOrderAmount - total).toFixed(2);
+                alert(`Mindestbestellwert für Lieferung ist €${minOrderAmount.toFixed(2)}.\nNoch €${needed} fehlen. Bitte füge weitere Artikel hinzu.`);
+                return false;
+            }
+            return true;
+        }
+
         // ── UPSELL ───────────────────────────────────────────────────────────
-        const UPSELL_ITEMS = [
-            { name: 'Smash Fries',  price: 2.99, emoji: '🍟', keyword: 'fries' },
-            { name: 'Soft Drink',   price: 2.49, emoji: '🥤', keyword: 'drink' },
-        ];
+        // All upsell candidates — picked smartly based on what's in the cart
+        const ALL_BURGERS = ['goat byte','byte classic','double byte','smoky bbq','crispy chicken','spicy chicken','green byte','falafel byte','truffle','spicy goat'];
+        const ALL_SIDES   = ['fries','onion ring','mozzarella','jalapeño','tender','currywurst'];
+        const ALL_DRINKS  = ['soda','shake','water','cola','fanta','sprite','drink'];
+
+        const UPSELL_POOL = {
+            burger: [
+                { name:'Byte Classic',       price:6.41, emoji:'🍔', desc:'Our most popular smash burger' },
+                { name:'Crispy Chicken Byte',price:5.87, emoji:'🐔', desc:'Crispy chicken, coleslaw, pickles' },
+                { name:'Green Byte (Vegan)', price:5.87, emoji:'🥑', desc:'Plant-based, avocado, roasted peppers' },
+            ],
+            side: [
+                { name:'Classic Fries',      price:2.66, emoji:'🍟', desc:'Crispy thin-cut fries' },
+                { name:'Peri Peri Fries',    price:3.20, emoji:'🔥', desc:'With Peri Peri spice' },
+                { name:'Crispy Onion Rings', price:4.80, emoji:'🧅', desc:'Beer-battered, 6 pcs' },
+            ],
+            drink: [
+                { name:'Sodas',              price:2.68, emoji:'🥤', desc:'Coca-Cola / Fanta / Sprite' },
+                { name:'Chocolate Shake',    price:3.73, emoji:'🍫', desc:'Rich Belgian chocolate' },
+                { name:'Vanilla Shake',      price:3.73, emoji:'🍦', desc:'Madagascar vanilla' },
+                { name:'Strawberry Shake',   price:3.73, emoji:'🍓', desc:'Fresh farm strawberries' },
+            ],
+        };
 
         function showUpsell() {
             const itemsText = (document.getElementById('items-field')?.value || '').toLowerCase();
-            const missing = UPSELL_ITEMS.filter(u => !itemsText.includes(u.keyword));
-            if (!missing.length) { submitFormViaAjax(); return; }
+            const hasBurger = ALL_BURGERS.some(k => itemsText.includes(k));
+            const hasSide   = ALL_SIDES.some(k => itemsText.includes(k));
+            const hasDrink  = ALL_DRINKS.some(k => itemsText.includes(k));
 
-            document.getElementById('upsell-offers').innerHTML = missing.map(u => `
+            const offers = [];
+
+            if (!hasBurger) {
+                // Pick a random burger suggestion
+                const pool = UPSELL_POOL.burger;
+                offers.push(pool[Math.floor(Math.random() * pool.length)]);
+            }
+            if (!hasSide) {
+                const pool = UPSELL_POOL.side;
+                offers.push(pool[Math.floor(Math.random() * pool.length)]);
+            }
+            if (!hasDrink) {
+                const pool = UPSELL_POOL.drink;
+                offers.push(pool[Math.floor(Math.random() * pool.length)]);
+            }
+
+            // Max 2 suggestions so it doesn't feel overwhelming
+            const shown = offers.slice(0, 2);
+            if (!shown.length) { submitFormViaAjax(); return; }
+
+            // Personalise the headline
+            let headline = 'Make it a meal? 🍔';
+            if (!hasBurger && hasSide) headline = 'Missing a burger? 🍔';
+            else if (hasBurger && !hasSide && !hasDrink) headline = 'Add sides & a drink? 🍟';
+            else if (hasBurger && !hasDrink) headline = 'Add a drink? 🥤';
+            else if (hasBurger && !hasSide) headline = 'Add some sides? 🍟';
+
+            document.getElementById('upsell-headline').textContent = headline;
+            document.getElementById('upsell-offers').innerHTML = shown.map(u => `
                 <div style="display:flex;align-items:center;justify-content:space-between;
                             background:rgba(255,127,0,0.07);border:1px solid rgba(255,127,0,0.2);
                             border-radius:14px;padding:.9rem 1rem;gap:.75rem">
@@ -443,12 +510,13 @@
                         <span style="font-size:1.6rem">${u.emoji}</span>
                         <div>
                             <div style="font-weight:800;font-size:.95rem">${u.name}</div>
+                            <div style="font-size:.8rem;color:#888;margin-bottom:.2rem">${u.desc}</div>
                             <div style="color:#ff7f00;font-weight:700">+€${u.price.toFixed(2)}</div>
                         </div>
                     </div>
                     <button onclick="addUpsellItem('${u.name}',${u.price},'${u.emoji}')"
                             style="padding:.5rem 1.1rem;background:#ff7f00;color:#fff;border:none;
-                                   border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer">
+                                   border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap">
                         + Add
                     </button>
                 </div>`).join('');
@@ -483,7 +551,7 @@
      z-index:9999;align-items:flex-end;justify-content:center;">
     <div style="background:#13100a;border:1px solid rgba(255,127,0,0.2);border-radius:20px 20px 0 0;
                 padding:1.5rem;width:100%;max-width:480px;">
-        <div style="font-size:1.1rem;font-weight:900;margin-bottom:.35rem">Make it a meal? 🍔</div>
+        <div id="upsell-headline" style="font-size:1.1rem;font-weight:900;margin-bottom:.35rem">Make it a meal? 🍔</div>
         <div style="font-size:.85rem;color:#888;margin-bottom:1.25rem">Add these to your order before we send it</div>
         <div id="upsell-offers" style="display:flex;flex-direction:column;gap:.65rem;margin-bottom:1rem"></div>
         <button onclick="closeUpsell()"
