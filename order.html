@@ -39,7 +39,6 @@
 <form action="https://formsubmit.co/pvsheram001@Gmail.com" class="order-form" id="checkout-form" method="POST">
  FormSubmit-Optionen 
 <input name="_captcha" type="hidden" value="false"/>
-<input name="_next" type="hidden" value="https://www.byteburgers.shop/thanks.html"/>
 <input id="payment-field" name="Payment_Status" type="hidden" value="Cash Pending"/>
 <input id="order-type-field" name="Order_Type" type="hidden" value=""/>
 <input name="_honey" style="display:none" type="text"/>
@@ -268,7 +267,7 @@
                         document.getElementById('payment-field').value = 'CASH: Pickup — Customer pays at store.';
                         checkoutForm.dataset.cashConfirmed = 'true';
                         sessionStorage.setItem('byteOrderType', 'PICKUP');
-                        checkoutForm.submit();
+                        submitFormViaAjax();
                     } else {
                         document.getElementById('cash-modal').classList.add('active');
                     }
@@ -308,6 +307,30 @@
                 addressSection.style.display = '';
                 addressField.value = '';
                 addressField.focus();
+            }
+        }
+
+        async function submitFormViaAjax() {
+            const form = document.getElementById('checkout-form');
+            const submitBtn = form.querySelector('.form-submit');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Bestellung wird gesendet…';
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (response.ok) {
+                    window.location.href = 'thanks.html';
+                } else {
+                    throw new Error('Server error');
+                }
+            } catch (err) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Bestellung bestätigen';
+                alert('Etwas ist schiefgelaufen. Bitte ruf uns an: 0212 315737');
             }
         }
 
@@ -362,7 +385,7 @@
             form.dataset.cashConfirmed = "true";
             sessionStorage.setItem('byteOrderType', 'DELIVERY');
             closeCashModal();
-            form.submit();
+            submitFormViaAjax();
         }
     </script>
 <script src="js/main.js"></script>
