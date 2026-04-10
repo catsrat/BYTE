@@ -667,9 +667,17 @@
         appId: "1:700610883011:web:b7e6f16233b67d7976e176"
     };
 
-    // Only init if not already done by main.js
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+
+    // Always keep menu data fresh — never serve stale offline cache
+    db.ref('menu').keepSynced(true);
+
+    // bfcache fix: when browser restores page from back/forward cache,
+    // Firebase doesn't re-fire. Force a fresh render.
+    window.addEventListener('pageshow', e => {
+        if (e.persisted) db.ref('menu').once('value', renderFromSnap);
+    });
 
     const SECTION_CONFIG = {
         Burgers:  { title: 'BYTE Burger',                    rotation: '-2deg',  id: 'fb-burgers'  },
@@ -733,7 +741,7 @@
         </section>`;
     }
 
-    db.ref('menu').on('value', snap => {
+    function renderFromSnap(snap) {
         const data = snap.val();
         const container = document.getElementById('firebase-menu');
         if (!data) {
@@ -761,7 +769,9 @@
                 max: 8, speed: 400, glare: true, 'max-glare': 0.15
             });
         }
-    });
+    }
+
+    db.ref('menu').on('value', renderFromSnap);
 })();
 </script>
 </body>
