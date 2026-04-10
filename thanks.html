@@ -242,6 +242,8 @@
         </div>
 
         <div class="order-ref" id="order-ref"></div>
+        <div id="eta-pill" style="display:none;background:rgba(68,255,136,0.08);border:1px solid rgba(68,255,136,0.25);
+             border-radius:50px;padding:.4rem 1.1rem;font-size:.85rem;font-weight:700;color:#44ff88;text-align:center"></div>
 
         <div class="call-box">
             <p>Questions about your order?</p>
@@ -378,10 +380,22 @@
     // ── FIREBASE LISTENER ──────────────────────
     function initTracking(id) {
         initMap();
+        let etaShown = false;
         db.ref('orders/' + id).on('value', snap => {
             const order = snap.val();
             if (!order) return;
             updateStatus(order.status);
+            // Show ETA pill once on load if we have distance data
+            if (!etaShown && order.eta_minutes > 0 && order.status !== 'delivered') {
+                etaShown = true;
+                const pill = document.getElementById('eta-pill');
+                const dist = order.distance_km ? ` · ${order.distance_km}km` : '';
+                pill.textContent = `⏱ Est. delivery: ~${order.eta_minutes} min${dist}`;
+                pill.style.display = 'block';
+            }
+            if (order.status === 'delivered') {
+                document.getElementById('eta-pill').style.display = 'none';
+            }
             if (order.driver_lat && order.driver_lng) {
                 document.getElementById('map-pill').style.opacity = '0';
                 animateMarker(order.driver_lat, order.driver_lng);

@@ -269,12 +269,33 @@
         if (getPin() === DRIVER_PIN) {
             document.getElementById('pin-screen').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
+            requestNotifPermission();
             listenOrders();
         } else {
             document.getElementById('pin-error').textContent = 'Wrong PIN — try again.';
             digits.forEach(d => d.value = '');
             digits[0].focus();
         }
+    }
+
+    // ── NOTIFICATIONS ────────────────────────
+    function requestNotifPermission() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }
+
+    function notifyNewOrder(id, order) {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+        const n = new Notification('🔔 New Order #' + id, {
+            body: `${order.name || 'Customer'} · ${order.type || ''} · €${(order.total||0).toFixed(2)}`,
+            icon: 'images/logo.png',
+            badge: 'images/logo.png',
+            tag: 'order-' + id,
+            renotify: true,
+            vibrate: [200, 100, 200, 100, 200]
+        });
+        n.onclick = () => { window.focus(); n.close(); };
     }
 
     // ── ORDERS ───────────────────────────────
@@ -325,6 +346,8 @@
                     const div = document.createElement('div');
                     div.innerHTML = cardHTML(id, order);
                     list.prepend(div.firstElementChild);
+                    // Notify driver (only after initial load, not on first paint)
+                    if (Object.keys(knownOrders).length > 0) notifyNewOrder(id, order);
                 } else if (changed) {
                     // Status changed — only update the tag and button state
                     updateCard(existing, order);

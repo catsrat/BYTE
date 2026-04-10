@@ -218,14 +218,16 @@
                     const lat = parseFloat(data[0].lat);
                     const lon = parseFloat(data[0].lon);
                     const distance = calculateDistance(STORE_COORDS.lat, STORE_COORDS.lon, lat, lon);
-                    
+
                     const fee = distance < 5 ? 2.00 : 3.50;
                     const total = subtotal + fee;
 
                     statusEl.innerText = `Distance: ${distance.toFixed(1)}km. Delivery Fee: €${fee.toFixed(2)} ✅`;
                     statusEl.style.color = "#44ff44";
                     totalEl.innerText = `€${total.toFixed(2)}`;
-                    
+                    // Save distance so thanks.html can show ETA without re-geocoding
+                    document.getElementById('items-field').dataset.distanceKm = distance.toFixed(2);
+
                     // Update hidden field with delivery info
                     processOrderVAT(fee, distance, true);
                 } else {
@@ -281,7 +283,7 @@
                     document.getElementById('payment-field').value = 'CASH: Pickup — Customer pays at store.';
                     checkoutForm.dataset.cashConfirmed = 'true';
                     sessionStorage.setItem('byteOrderType', 'pickup');
-                    submitFormViaAjax();
+                    showUpsell();
                 } else {
                     document.getElementById('cash-modal').classList.add('active');
                 }
@@ -337,6 +339,8 @@
             // Save full order data for ALL order types (admin needs to see everything)
             try {
                 const form2 = document.getElementById('checkout-form');
+                const distKm   = parseFloat(document.getElementById('items-field')?.dataset.distanceKm) || 0;
+                const etaMins  = distKm > 0 ? Math.round(10 + (distKm / 25) * 60) : 0;
                 await db.ref('orders/' + orderId).set({
                     status: 'confirmed',
                     created_at: Date.now(),
@@ -347,7 +351,9 @@
                     items: document.getElementById('items-field')?.value || '',
                     payment: document.getElementById('payment-field')?.value || '',
                     notes: form2.querySelector('[name="notes"]')?.value || '',
-                    total: parseFloat(document.getElementById('final-total-display')?.textContent?.replace('€','')) || 0
+                    total: parseFloat(document.getElementById('final-total-display')?.textContent?.replace('€','')) || 0,
+                    distance_km: distKm,
+                    eta_minutes: etaMins
                 });
             } catch(e) {}
 
@@ -415,9 +421,79 @@
             form.dataset.cashConfirmed = "true";
             sessionStorage.setItem('byteOrderType', 'delivery');
             closeCashModal();
+            showUpsell();
+        }
+
+        // ── UPSELL ───────────────────────────────────────────────────────────
+        const UPSELL_ITEMS = [
+            { name: 'Smash Fries',  price: 2.99, emoji: '🍟', keyword: 'fries' },
+            { name: 'Soft Drink',   price: 2.49, emoji: '🥤', keyword: 'drink' },
+        ];
+
+        function showUpsell() {
+            const itemsText = (document.getElementById('items-field')?.value || '').toLowerCase();
+            const missing = UPSELL_ITEMS.filter(u => !itemsText.includes(u.keyword));
+            if (!missing.length) { submitFormViaAjax(); return; }
+
+            document.getElementById('upsell-offers').innerHTML = missing.map(u => `
+                <div style="display:flex;align-items:center;justify-content:space-between;
+                            background:rgba(255,127,0,0.07);border:1px solid rgba(255,127,0,0.2);
+                            border-radius:14px;padding:.9rem 1rem;gap:.75rem">
+                    <div style="display:flex;align-items:center;gap:.75rem">
+                        <span style="font-size:1.6rem">${u.emoji}</span>
+                        <div>
+                            <div style="font-weight:800;font-size:.95rem">${u.name}</div>
+                            <div style="color:#ff7f00;font-weight:700">+€${u.price.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <button onclick="addUpsellItem('${u.name}',${u.price},'${u.emoji}')"
+                            style="padding:.5rem 1.1rem;background:#ff7f00;color:#fff;border:none;
+                                   border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer">
+                        + Add
+                    </button>
+                </div>`).join('');
+            document.getElementById('upsell-modal').style.display = 'flex';
+        }
+
+        function addUpsellItem(name, price, emoji) {
+            const itemsField = document.getElementById('items-field');
+            const totalEl    = document.getElementById('final-total-display');
+            // Append item to order text
+            itemsField.value += `\n${emoji} ${name} x1 — €${price.toFixed(2)}`;
+            if (itemsField.dataset.baseItems !== undefined)
+                itemsField.dataset.baseItems += `\n${emoji} ${name} x1 — €${price.toFixed(2)}`;
+            // Update total
+            const current = parseFloat(totalEl.textContent.replace('€','')) || 0;
+            totalEl.textContent = `€${(current + price).toFixed(2)}`;
+            // Remove that row from the modal
+            const btn = event.target;
+            btn.closest('div[style]').remove();
+            // If no more offers, close and submit
+            if (!document.getElementById('upsell-offers').children.length) closeUpsell();
+        }
+
+        function closeUpsell() {
+            document.getElementById('upsell-modal').style.display = 'none';
             submitFormViaAjax();
         }
     </script>
+
+<!-- UPSELL MODAL -->
+<div id="upsell-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);
+     z-index:9999;align-items:flex-end;justify-content:center;">
+    <div style="background:#13100a;border:1px solid rgba(255,127,0,0.2);border-radius:20px 20px 0 0;
+                padding:1.5rem;width:100%;max-width:480px;">
+        <div style="font-size:1.1rem;font-weight:900;margin-bottom:.35rem">Make it a meal? 🍔</div>
+        <div style="font-size:.85rem;color:#888;margin-bottom:1.25rem">Add these to your order before we send it</div>
+        <div id="upsell-offers" style="display:flex;flex-direction:column;gap:.65rem;margin-bottom:1rem"></div>
+        <button onclick="closeUpsell()"
+                style="width:100%;padding:.85rem;background:rgba(255,255,255,0.06);
+                       border:1px solid rgba(255,255,255,0.1);border-radius:12px;
+                       color:#aaa;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer">
+            No thanks, place order
+        </button>
+    </div>
+</div>
 <script src="js/main.js"></script>
 </body>
 </html>

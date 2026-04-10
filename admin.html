@@ -461,10 +461,19 @@ label.form-label { font-size:.78rem; color:var(--muted); display:block; margin-b
             <div class="settings-section">
                 <div class="section-title">Change Driver PIN</div>
                 <div class="settings-row" style="flex-wrap:wrap;gap:.75rem">
-                    <input type="password" id="new-pin" maxlength="4" placeholder="New 4-digit PIN" inputmode="numeric" style="width:180px"/>
+                    <input type="password" id="new-driver-pin" maxlength="4" placeholder="New 4-digit PIN" inputmode="numeric" style="width:180px"/>
                     <button class="btn btn-primary btn-sm" onclick="saveDriverPin()">Update PIN</button>
                 </div>
-                <div id="pin-save-msg" style="font-size:.8rem;color:var(--green);margin-top:.5rem;display:none">PIN updated ✓</div>
+                <div id="driver-pin-save-msg" style="font-size:.8rem;color:var(--green);margin-top:.5rem;display:none">Driver PIN updated ✓</div>
+            </div>
+
+            <div class="settings-section">
+                <div class="section-title">Change Admin PIN</div>
+                <div class="settings-row" style="flex-wrap:wrap;gap:.75rem">
+                    <input type="password" id="new-admin-pin" maxlength="4" placeholder="New 4-digit PIN" inputmode="numeric" style="width:180px"/>
+                    <button class="btn btn-primary btn-sm" onclick="saveAdminPin()">Update PIN</button>
+                </div>
+                <div id="admin-pin-save-msg" style="font-size:.8rem;color:var(--green);margin-top:.5rem;display:none">Admin PIN updated ✓</div>
             </div>
         </div>
 
@@ -536,7 +545,8 @@ label.form-label { font-size:.78rem; color:var(--muted); display:block; margin-b
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────────
-let ADMIN_PIN = '1234'; // ← Change this
+let ADMIN_PIN = '1234'; // default — overridden by Firebase on load
+let adminPinReady = false;
 
 const firebaseConfig = {
     apiKey: "AIzaSyCfAfJkP9EsxPR1Zp7J8jctgSoxIfM_gbE",
@@ -552,6 +562,13 @@ const db = firebase.database();
 
 const STORE = { lat: 51.178389, lng: 7.031451 };
 
+// Load admin PIN from Firebase
+db.ref('settings/adminPin').once('value', snap => {
+    if (snap.val()) ADMIN_PIN = snap.val();
+    adminPinReady = true;
+});
+setTimeout(() => { adminPinReady = true; }, 3000); // fallback
+
 // ── PIN ──────────────────────────────────────────────────────────────────────
 const digits = ['p1','p2','p3','p4'].map(id => document.getElementById(id));
 digits.forEach((input, i) => {
@@ -566,6 +583,12 @@ digits.forEach((input, i) => {
 
 function checkPin() {
     const entered = digits.map(d => d.value).join('');
+    if (!adminPinReady) {
+        document.getElementById('pin-error').textContent = 'Loading… try again in a second.';
+        digits.forEach(d => d.value = '');
+        digits[0].focus();
+        return;
+    }
     if (entered === ADMIN_PIN) {
         document.getElementById('pin-screen').style.display = 'none';
         const app = document.getElementById('app');
@@ -817,8 +840,8 @@ const DEFAULT_MENU = {
 function listenMenu() {
     db.ref('menu').on('value', snap => {
         const data = snap.val();
-        if (!data) {
-            // Seed default menu into Firebase
+        if (!data || Object.keys(data).length === 0) {
+            // Seed default menu into Firebase (only runs once when menu is empty)
             Object.entries(DEFAULT_MENU).forEach(([section, items]) => {
                 items.forEach(item => {
                     const key = db.ref('menu').push().key;
@@ -1182,14 +1205,26 @@ function saveRules() {
 }
 
 function saveDriverPin() {
-    const pin = document.getElementById('new-pin').value;
+    const pin = document.getElementById('new-driver-pin').value;
     if (!/^\d{4}$/.test(pin)) { alert('PIN must be exactly 4 digits'); return; }
     db.ref('settings/driverPin').set(pin);
-    const msg = document.getElementById('pin-save-msg');
+    const msg = document.getElementById('driver-pin-save-msg');
     msg.style.display = 'block';
-    document.getElementById('new-pin').value = '';
+    document.getElementById('new-driver-pin').value = '';
     setTimeout(() => { msg.style.display = 'none'; }, 3000);
     showToast('🔑 Driver PIN updated');
+}
+
+function saveAdminPin() {
+    const pin = document.getElementById('new-admin-pin').value;
+    if (!/^\d{4}$/.test(pin)) { alert('PIN must be exactly 4 digits'); return; }
+    db.ref('settings/adminPin').set(pin);
+    ADMIN_PIN = pin; // update in memory immediately
+    const msg = document.getElementById('admin-pin-save-msg');
+    msg.style.display = 'block';
+    document.getElementById('new-admin-pin').value = '';
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+    showToast('🔑 Admin PIN updated');
 }
 </script>
 </body>
