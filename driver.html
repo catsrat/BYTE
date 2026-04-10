@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>BYTE Driver</title>
+<meta name="robots" content="noindex,nofollow"/>
+<link rel="icon" type="image/png" href="images/logo.png"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet"/>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+        --primary: #ff7f00;
+        --primary-glow: rgba(255,127,0,0.4);
+        --bg: #090705;
+        --card: #111009;
+        --border: rgba(255,255,255,0.06);
+        --muted: #666;
+    }
+    body { font-family:'Outfit',sans-serif; background:var(--bg); color:#fff; min-height:100vh; }
+
+    /* ── PIN SCREEN ───────────────────────── */
+    #pin-screen {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        padding: 2rem;
+        background: radial-gradient(ellipse at center, rgba(255,127,0,0.07) 0%, transparent 70%);
+    }
+    #pin-screen img { height: 70px; margin-bottom: 0.5rem; }
+    .pin-label { font-size:0.8rem; text-transform:uppercase; letter-spacing:2px; color:var(--muted); }
+    .pin-title { font-size:1.6rem; font-weight:900; color:var(--primary); text-transform:uppercase; letter-spacing:2px; }
+    .pin-digits { display:flex; gap:0.75rem; }
+    .pin-digit {
+        width: 54px; height: 62px;
+        background: var(--card);
+        border: 2px solid var(--border);
+        border-radius: 12px;
+        color: #fff;
+        font-size: 1.8rem;
+        font-weight: 800;
+        text-align: center;
+        font-family: inherit;
+        transition: border-color 0.2s;
+        -webkit-text-security: disc;
+    }
+    .pin-digit:focus { outline:none; border-color:var(--primary); }
+    .pin-error { color:#ff4444; font-size:0.88rem; min-height:1.2rem; text-align:center; }
+    .pin-btn {
+        padding: 0.9rem 3rem;
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 50px;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        box-shadow: 0 4px 20px var(--primary-glow);
+    }
+
+    /* ── DASHBOARD ────────────────────────── */
+    #dashboard { display:none; max-width:480px; margin:0 auto; padding:1.5rem; min-height:100vh; }
+
+    .dash-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+    .dash-header img { height: 44px; }
+
+    .gps-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 50px;
+        padding: 0.3rem 0.9rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+        transition: all 0.3s;
+    }
+    .gps-pill.live { border-color:rgba(68,255,136,0.4); color:#44ff88; }
+    .gps-dot { width:8px; height:8px; border-radius:50%; background:#444; transition:background 0.3s; }
+    .gps-pill.live .gps-dot { background:#44ff88; animation:blink 1.5s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .dash-title { font-size:1.6rem; font-weight:900; text-transform:uppercase; margin-bottom:0.25rem; }
+    .dash-sub { color:var(--muted); font-size:0.9rem; margin-bottom:1.5rem; }
+
+    /* Order cards */
+    .orders-list { display:flex; flex-direction:column; gap:0.75rem; }
+
+    .empty-state {
+        text-align: center;
+        color: var(--muted);
+        padding: 4rem 2rem;
+    }
+    .empty-state .icon { font-size:3rem; margin-bottom:1rem; display:block; }
+
+    .order-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.25rem;
+        transition: border-color 0.3s;
+    }
+    .order-card.delivering { border-color:var(--primary); background:rgba(255,127,0,0.05); }
+
+    .card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    .order-num { font-size:1.05rem; font-weight:800; color:var(--primary); letter-spacing:1px; }
+    .order-time { font-size:0.78rem; color:var(--muted); }
+
+    .order-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size:0.75rem;
+        font-weight:700;
+        text-transform:uppercase;
+        letter-spacing:0.5px;
+        margin-bottom: 1rem;
+    }
+    .tag-confirmed  { background:rgba(255,200,0,0.1);  color:#ffcc00; }
+    .tag-delivering { background:rgba(255,127,0,0.12); color:var(--primary); }
+
+    .card-btns { display:flex; gap:0.6rem; }
+
+    .btn-start {
+        flex: 1;
+        padding: 0.75rem;
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .btn-start:hover { background:#e07000; }
+    .btn-start:disabled { background:rgba(255,127,0,0.25); cursor:not-allowed; }
+
+    .btn-done {
+        flex: 1;
+        padding: 0.75rem;
+        background: rgba(68,255,136,0.08);
+        color: #44ff88;
+        border: 1px solid rgba(68,255,136,0.25);
+        border-radius: 10px;
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-done:hover { background:rgba(68,255,136,0.18); }
+</style>
+</head>
+<body>
+
+<!-- PIN -->
+<div id="pin-screen">
+    <img src="images/logo-white.png" alt="BYTE Burgers"/>
+    <div class="pin-label">Restricted Access</div>
+    <div class="pin-title">Driver Mode</div>
+    <div class="pin-digits">
+        <input class="pin-digit" id="p1" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
+        <input class="pin-digit" id="p2" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
+        <input class="pin-digit" id="p3" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
+        <input class="pin-digit" id="p4" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <button class="pin-btn" onclick="checkPin()">Unlock</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+    <div class="dash-header">
+        <img src="images/logo-white.png" alt="BYTE"/>
+        <div class="gps-pill" id="gps-pill">
+            <div class="gps-dot"></div>
+            <span id="gps-txt">GPS off</span>
+        </div>
+    </div>
+    <div class="dash-title">Active Orders</div>
+    <div class="dash-sub" id="dash-sub">Loading…</div>
+    <div class="orders-list" id="orders-list"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+    const DRIVER_PIN = '2580'; // ← Change this to your preferred 4-digit PIN
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCfAfJkP9EsxPR1Zp7J8jctgSoxIfM_gbE",
+        authDomain: "byte-34c84.firebaseapp.com",
+        databaseURL: "https://byte-34c84-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "byte-34c84",
+        storageBucket: "byte-34c84.firebasestorage.app",
+        messagingSenderId: "700610883011",
+        appId: "1:700610883011:web:b7e6f16233b67d7976e176"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let gpsInterval = null;
+    let activeOrder  = null;
+
+    // ── PIN ──────────────────────────────────
+    const digits = ['p1','p2','p3','p4'].map(id => document.getElementById(id));
+
+    digits.forEach((input, i) => {
+        input.addEventListener('input', () => {
+            if (input.value && i < digits.length - 1) digits[i + 1].focus();
+            if (digits.map(d => d.value).join('').length === 4) checkPin();
+        });
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Backspace' && !input.value && i > 0) digits[i - 1].focus();
+        });
+    });
+
+    function getPin() { return digits.map(d => d.value).join(''); }
+
+    function checkPin() {
+        if (getPin() === DRIVER_PIN) {
+            document.getElementById('pin-screen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            cleanupOldOrders();
+            listenOrders();
+        } else {
+            document.getElementById('pin-error').textContent = 'Wrong PIN — try again.';
+            digits.forEach(d => d.value = '');
+            digits[0].focus();
+        }
+    }
+
+    // ── ORDERS ───────────────────────────────
+    function listenOrders() {
+        db.ref('orders').on('value', snap => {
+            const all = snap.val() || {};
+            const active = Object.entries(all)
+                .filter(([, o]) => o.status !== 'delivered')
+                .sort((a, b) => b[1].created_at - a[1].created_at);
+
+            const sub = document.getElementById('dash-sub');
+            const list = document.getElementById('orders-list');
+
+            if (active.length === 0) {
+                sub.textContent = 'No active orders right now';
+                list.innerHTML = '<div class="empty-state"><span class="icon">🛵</span>Waiting for new orders…</div>';
+                return;
+            }
+
+            sub.textContent = active.length + ' active order' + (active.length > 1 ? 's' : '');
+            list.innerHTML = active.map(([id, o]) => cardHTML(id, o)).join('');
+        });
+    }
+
+    function cardHTML(id, order) {
+        const delivering = order.status === 'on_the_way';
+        const time = new Date(order.created_at).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
+        return `
+        <div class="order-card ${delivering ? 'delivering' : ''}" id="card-${id}">
+            <div class="card-top">
+                <span class="order-num">#${id}</span>
+                <span class="order-time">${time}</span>
+            </div>
+            <div class="order-tag ${delivering ? 'tag-delivering' : 'tag-confirmed'}">
+                ${delivering ? '🛵 Delivering' : '⏳ Confirmed'}
+            </div>
+            <div class="card-btns">
+                <button class="btn-start" onclick="startDelivery('${id}')" ${delivering ? 'disabled' : ''}>
+                    🛵 Start Delivery
+                </button>
+                <button class="btn-done" onclick="markDelivered('${id}')">
+                    ✅ Delivered
+                </button>
+            </div>
+        </div>`;
+    }
+
+    // ── GPS TRACKING ─────────────────────────
+    function startDelivery(orderId) {
+        // Stop any existing GPS stream
+        if (gpsInterval) { clearInterval(gpsInterval); gpsInterval = null; }
+
+        activeOrder = orderId;
+        db.ref('orders/' + orderId).update({ status: 'on_the_way' });
+
+        const pill  = document.getElementById('gps-pill');
+        const label = document.getElementById('gps-txt');
+
+        function send() {
+            navigator.geolocation.getCurrentPosition(pos => {
+                pill.classList.add('live');
+                label.textContent = 'GPS live';
+                db.ref('orders/' + orderId).update({
+                    driver_lat: pos.coords.latitude,
+                    driver_lng: pos.coords.longitude
+                });
+            }, () => { label.textContent = 'GPS error'; }, { enableHighAccuracy: true, timeout: 10000 });
+        }
+
+        send();
+        gpsInterval = setInterval(send, 5000);
+    }
+
+    function markDelivered(orderId) {
+        if (activeOrder === orderId) {
+            clearInterval(gpsInterval);
+            gpsInterval = null;
+            activeOrder = null;
+            const pill = document.getElementById('gps-pill');
+            pill.classList.remove('live');
+            document.getElementById('gps-txt').textContent = 'GPS off';
+        }
+        db.ref('orders/' + orderId).update({ status:'delivered', driver_lat:null, driver_lng:null });
+    }
+
+    // ── CLEANUP ───────────────────────────────
+    function cleanupOldOrders() {
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+        db.ref('orders').once('value', snap => {
+            (snap.val() ? Object.entries(snap.val()) : []).forEach(([id, o]) => {
+                if (o.created_at < cutoff || o.status === 'delivered') {
+                    db.ref('orders/' + id).remove();
+                }
+            });
+        });
+    }
+</script>
+</body>
+</html>

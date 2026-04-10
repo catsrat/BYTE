@@ -5,14 +5,15 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Bestellung bestätigt - BYTE Burgers</title>
 <link href="css/style.css" rel="stylesheet"/>
-<!-- PWA Meta Tags -->
 <link href="manifest.json?v=2" rel="manifest"/>
 <meta content="#ff751f" name="theme-color"/>
 <link href="images/app-icon.png" rel="apple-touch-icon"/>
 <meta content="yes" name="apple-mobile-web-app-capable"/>
 <meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
 <link rel="icon" type="image/png" href="images/logo.png"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
+    /* ── PICKUP SIMPLE VIEW ───────────────── */
     .thanks-section {
         min-height: 100vh;
         display: flex;
@@ -22,87 +23,177 @@
         text-align: center;
         padding: 6rem 2rem 4rem;
     }
-    .thanks-icon {
-        font-size: 4rem;
-        margin-bottom: 1.5rem;
-        animation: bounce 2s infinite ease-in-out;
+    .thanks-icon { font-size: 4rem; margin-bottom: 1.5rem; animation: bounce 2s infinite ease-in-out; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-16px)} }
+    .thanks-title { font-size: clamp(2.5rem,7vw,4rem); margin-bottom: 0.75rem; }
+    .thanks-subtitle { font-size:1.2rem; color:var(--text-muted); max-width:520px; margin:0 auto 2.5rem; line-height:1.6; }
+    .info-cards { display:flex; gap:1.25rem; justify-content:center; flex-wrap:wrap; margin-bottom:2.5rem; width:100%; max-width:600px; }
+    .info-card { background:rgba(255,127,0,0.07); border:1px solid rgba(255,127,0,0.25); border-radius:16px; padding:1.25rem 1.5rem; flex:1; min-width:160px; }
+    .info-card .card-label { font-size:0.78rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); margin-bottom:0.4rem; }
+    .info-card .card-value { font-size:1.15rem; font-weight:800; color:#fff; }
+    .info-card .card-value.highlight { color:var(--primary); }
+    .call-box { background:rgba(255,127,0,0.1); border:1px solid rgba(255,127,0,0.35); border-radius:16px; padding:1.25rem 2rem; margin-bottom:2.5rem; max-width:420px; width:100%; }
+    .call-box p { font-size:0.95rem; color:var(--text-muted); margin-bottom:0.6rem; }
+    .call-link { font-size:1.5rem; font-weight:800; color:var(--primary); text-decoration:none; }
+    .call-link:hover { text-decoration:underline; }
+    .btn-row { display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; }
+
+    /* ── DELIVERY TRACKING VIEW ───────────── */
+    #tracking-view {
+        display: none;
+        flex-direction: column;
+        min-height: 100vh;
     }
-    @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-16px); }
-    }
-    .thanks-title {
-        font-size: clamp(2.5rem, 7vw, 4rem);
-        margin-bottom: 0.75rem;
-    }
-    .thanks-subtitle {
-        font-size: 1.2rem;
-        color: var(--text-muted);
-        max-width: 520px;
-        margin: 0 auto 2.5rem;
-        line-height: 1.6;
-    }
-    .info-cards {
-        display: flex;
-        gap: 1.25rem;
-        justify-content: center;
-        flex-wrap: wrap;
-        margin-bottom: 2.5rem;
+
+    #map {
         width: 100%;
-        max-width: 600px;
+        height: 45vh;
+        min-height: 260px;
+        margin-top: 95px;
+        position: relative;
+        z-index: 1;
     }
-    .info-card {
-        background: rgba(255,127,0,0.07);
-        border: 1px solid rgba(255,127,0,0.25);
-        border-radius: 16px;
-        padding: 1.25rem 1.5rem;
-        flex: 1;
-        min-width: 160px;
+
+    .leaflet-control-attribution {
+        font-size: 0.6rem !important;
+        background: rgba(0,0,0,0.5) !important;
+        color: #666 !important;
     }
-    .info-card .card-label {
-        font-size: 0.78rem;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        color: var(--text-muted);
-        margin-bottom: 0.4rem;
-    }
-    .info-card .card-value {
-        font-size: 1.15rem;
-        font-weight: 800;
-        color: #fff;
-    }
-    .info-card .card-value.highlight {
-        color: var(--primary);
-    }
-    .call-box {
-        background: rgba(255,127,0,0.1);
+
+    .map-pill {
+        position: absolute;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(9,7,5,0.88);
+        backdrop-filter: blur(12px);
         border: 1px solid rgba(255,127,0,0.35);
-        border-radius: 16px;
-        padding: 1.25rem 2rem;
-        margin-bottom: 2.5rem;
-        max-width: 420px;
-        width: 100%;
+        border-radius: 50px;
+        padding: 0.45rem 1.2rem;
+        font-size: 0.85rem;
+        color: #fff;
+        white-space: nowrap;
+        z-index: 999;
+        pointer-events: none;
+        transition: opacity 0.4s;
     }
-    .call-box p {
-        font-size: 0.95rem;
-        color: var(--text-muted);
-        margin-bottom: 0.6rem;
-    }
-    .call-link {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: var(--primary);
-        text-decoration: none;
-        letter-spacing: 0.5px;
-    }
-    .call-link:hover {
-        text-decoration: underline;
-    }
-    .btn-row {
+
+    .tracking-card {
+        flex: 1;
+        background: #090705;
+        padding: 1.75rem 1.5rem;
         display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    /* Status badge */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1.4rem;
+        border-radius: 50px;
+        font-weight: 800;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.4s;
+    }
+    .badge-confirmed  { background:rgba(255,200,0,0.1);  color:#ffcc00; border:1px solid rgba(255,200,0,0.3); }
+    .badge-on_the_way { background:rgba(255,127,0,0.12); color:var(--primary); border:1px solid rgba(255,127,0,0.4); }
+    .badge-delivered  { background:rgba(68,255,136,0.1); color:#44ff88; border:1px solid rgba(68,255,136,0.3); }
+
+    /* Steps */
+    .steps-wrap { width:100%; max-width:380px; }
+
+    .step-row {
+        display: flex;
+        align-items: center;
         gap: 1rem;
-        flex-wrap: wrap;
+        padding: 0.65rem 0;
+        position: relative;
+    }
+
+    .step-row:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 17px;
+        top: calc(100% - 4px);
+        width: 2px;
+        height: 0.8rem;
+        background: rgba(255,255,255,0.06);
+        transition: background 0.4s;
+    }
+
+    .step-row.done::after { background: var(--primary); }
+
+    .step-circle {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
         justify-content: center;
+        flex-shrink: 0;
+        font-size: 1rem;
+        background: #14100c;
+        border: 2px solid rgba(255,255,255,0.06);
+        transition: all 0.4s;
+    }
+
+    .step-row.done    .step-circle { background:var(--primary); border-color:var(--primary); }
+    .step-row.current .step-circle { border-color:var(--primary); animation:pulse-step 1.5s infinite; }
+
+    @keyframes pulse-step {
+        0%,100% { box-shadow: 0 0 0 0 rgba(255,127,0,0.5); }
+        50%      { box-shadow: 0 0 0 8px rgba(255,127,0,0); }
+    }
+
+    .step-label { font-size:1rem; font-weight:600; color:#555; transition:color 0.4s; }
+    .step-row.done .step-label,
+    .step-row.current .step-label { color:#fff; }
+
+    .order-ref { font-size:0.85rem; color:#555; letter-spacing:1px; }
+    .order-ref span { color:var(--primary); font-weight:700; }
+
+    /* Driver marker */
+    .driver-wrap { position:relative; width:52px; height:52px; }
+    .driver-pulse {
+        position:absolute; width:52px; height:52px;
+        border-radius:50%;
+        background:rgba(255,127,0,0.3);
+        animation:pulse-ring 2s infinite;
+    }
+    .driver-dot {
+        position:absolute; width:38px; height:38px;
+        top:7px; left:7px;
+        background:#ff7f00;
+        border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        font-size:1.2rem;
+        box-shadow:0 4px 16px rgba(255,127,0,0.6);
+    }
+    @keyframes pulse-ring {
+        0%   { transform:scale(0.8); opacity:0.9; }
+        100% { transform:scale(2);   opacity:0; }
+    }
+
+    /* Store marker */
+    .store-dot {
+        width:34px; height:34px;
+        background:#fff;
+        border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        font-size:1rem;
+        box-shadow:0 4px 12px rgba(0,0,0,0.5);
+        border:2px solid #ff7f00;
+    }
+
+    @media (max-width:480px) {
+        #map { height:38vh; }
+        .tracking-card { padding:1.25rem 1rem; }
+        .info-cards { flex-direction:column; }
     }
 </style>
 </head>
@@ -117,70 +208,200 @@
 <li><a href="menu.html">Speisekarte</a></li>
 <li><a href="franchise.html">Franchise</a></li>
 </ul>
-<div class="hamburger" id="mobile-menu">
-<span></span>
-<span></span>
-<span></span>
-</div>
+<div class="hamburger" id="mobile-menu"><span></span><span></span><span></span></div>
 </nav>
 </header>
-<main class="thanks-section container">
-    <div class="thanks-icon" id="thanks-icon">🍔</div>
-    <h1 class="text-gradient thanks-title">Bestellung aufgegeben!</h1>
-    <p class="thanks-subtitle" id="thanks-subtitle">Deine Bestellung wurde platziert und wird jetzt vorbereitet.</p>
 
+<!-- ── DELIVERY TRACKING ───────────────────────── -->
+<div id="tracking-view">
+    <div style="position:relative;">
+        <div id="map"></div>
+        <div class="map-pill" id="map-pill">⏳ Waiting for driver…</div>
+    </div>
+
+    <div class="tracking-card">
+        <div class="status-badge badge-confirmed" id="status-badge">⏳ Order Confirmed</div>
+
+        <div class="steps-wrap">
+            <div class="step-row done" id="step-confirmed">
+                <div class="step-circle">✓</div>
+                <span class="step-label">Order Confirmed</span>
+            </div>
+            <div class="step-row current" id="step-preparing">
+                <div class="step-circle">🍔</div>
+                <span class="step-label">Being Prepared</span>
+            </div>
+            <div class="step-row" id="step-on_the_way">
+                <div class="step-circle">🛵</div>
+                <span class="step-label">On the Way</span>
+            </div>
+            <div class="step-row" id="step-delivered">
+                <div class="step-circle">✅</div>
+                <span class="step-label">Delivered!</span>
+            </div>
+        </div>
+
+        <div class="order-ref" id="order-ref"></div>
+
+        <div class="call-box">
+            <p>Questions about your order?</p>
+            <a class="call-link" href="tel:+49212315737">0212 315737</a>
+        </div>
+
+        <div class="btn-row">
+            <a class="btn" href="menu.html">Reorder</a>
+            <a class="btn" href="index.html" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;">Home</a>
+        </div>
+    </div>
+</div>
+
+<!-- ── PICKUP SIMPLE VIEW ─────────────────────── -->
+<main id="simple-view" style="display:none;">
+<div class="thanks-section container">
+    <div class="thanks-icon">🏪</div>
+    <h1 class="text-gradient thanks-title">Bestellung aufgegeben!</h1>
+    <p class="thanks-subtitle">Deine Bestellung wurde aufgegeben! Komm einfach zur Abholung vorbei.</p>
     <div class="info-cards">
         <div class="info-card">
             <div class="card-label">Bestellart</div>
-            <div class="card-value highlight" id="order-type-display">—</div>
+            <div class="card-value highlight">Abholung</div>
         </div>
         <div class="info-card">
             <div class="card-label">Geschätzte Zeit</div>
-            <div class="card-value highlight" id="eta-display">—</div>
+            <div class="card-value highlight">~15 Min.</div>
         </div>
     </div>
-
     <div class="call-box">
-        <p>Fragen zu deiner Bestellung? Ruf uns an:</p>
+        <p>Fragen zu deiner Bestellung?</p>
         <a class="call-link" href="tel:+49212315737">0212 315737</a>
     </div>
-
     <div class="btn-row">
         <a class="btn" href="menu.html">Erneut bestellen</a>
-        <a class="btn" href="index.html" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff;">Startseite</a>
+        <a class="btn" href="index.html" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;">Startseite</a>
     </div>
+</div>
 </main>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCfAfJkP9EsxPR1Zp7J8jctgSoxIfM_gbE",
+        authDomain: "byte-34c84.firebaseapp.com",
+        databaseURL: "https://byte-34c84-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "byte-34c84",
+        storageBucket: "byte-34c84.firebasestorage.app",
+        messagingSenderId: "700610883011",
+        appId: "1:700610883011:web:b7e6f16233b67d7976e176"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const STORE = { lat: 51.178389, lng: 7.031451 };
     const orderType = sessionStorage.getItem('byteOrderType');
+    const orderId   = sessionStorage.getItem('byteOrderId');
 
-    const icon = document.getElementById('thanks-icon');
-    const subtitle = document.getElementById('thanks-subtitle');
-    const orderTypeDisplay = document.getElementById('order-type-display');
-    const etaDisplay = document.getElementById('eta-display');
-
-    if (orderType === 'PICKUP') {
-        icon.textContent = '🏪';
-        subtitle.textContent = 'Deine Bestellung wurde aufgegeben! Komm einfach zur Abholung vorbei.';
-        orderTypeDisplay.textContent = 'Abholung';
-        etaDisplay.textContent = '~15 Min.';
-    } else if (orderType === 'DELIVERY') {
-        icon.textContent = '🛵';
-        subtitle.textContent = 'Deine Bestellung wurde aufgegeben! Unser Fahrer bringt sie dir so schnell wie möglich.';
-        orderTypeDisplay.textContent = 'Lieferung';
-        etaDisplay.textContent = '30–45 Min.';
-    } else {
-        // Fallback if sessionStorage was not set (e.g. direct page visit)
-        icon.textContent = '✅';
-        subtitle.textContent = 'Deine Bestellung wurde aufgegeben! Wir rufen dich gleich an, um alles zu bestätigen.';
-        orderTypeDisplay.textContent = 'Bestätigt';
-        etaDisplay.textContent = 'Bald';
-    }
-
-    // Clear cart and order data
+    // Clear session data
     localStorage.removeItem('byteCart');
     localStorage.removeItem('byteOrderVATDetails');
     sessionStorage.removeItem('byteOrderType');
+    sessionStorage.removeItem('byteOrderId');
+
+    if (orderType === 'DELIVERY' && orderId) {
+        document.getElementById('tracking-view').style.display = 'flex';
+        document.getElementById('order-ref').innerHTML = 'Order <span>#' + orderId + '</span>';
+        initTracking(orderId);
+    } else {
+        document.getElementById('simple-view').style.display = 'block';
+    }
+
+    // ── MAP ────────────────────────────────────
+    let map, driverMarker;
+
+    function initMap() {
+        map = L.map('map', { zoomControl: false }).setView([STORE.lat, STORE.lng], 14);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap © CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Store marker
+        L.marker([STORE.lat, STORE.lng], {
+            icon: L.divIcon({
+                className: '',
+                html: '<div class="store-dot">🍔</div>',
+                iconSize: [34, 34],
+                iconAnchor: [17, 17]
+            })
+        }).addTo(map);
+
+        map.scrollWheelZoom.disable();
+    }
+
+    // ── DRIVER MARKER ──────────────────────────
+    function getDriverIcon() {
+        return L.divIcon({
+            className: '',
+            html: '<div class="driver-wrap"><div class="driver-pulse"></div><div class="driver-dot">🛵</div></div>',
+            iconSize: [52, 52],
+            iconAnchor: [26, 26]
+        });
+    }
+
+    function animateMarker(toLat, toLng) {
+        if (!driverMarker) {
+            driverMarker = L.marker([toLat, toLng], { icon: getDriverIcon() }).addTo(map);
+            return;
+        }
+        const from = driverMarker.getLatLng();
+        const start = performance.now();
+        const dur = 4000;
+        (function frame(now) {
+            const t = Math.min((now - start) / dur, 1);
+            const e = t < 0.5 ? 2*t*t : -1+(4-2*t)*t; // ease in-out
+            driverMarker.setLatLng([from.lat + (toLat - from.lat) * e, from.lng + (toLng - from.lng) * e]);
+            if (t < 1) requestAnimationFrame(frame);
+        })(start);
+    }
+
+    // ── FIREBASE LISTENER ──────────────────────
+    function initTracking(id) {
+        initMap();
+        db.ref('orders/' + id).on('value', snap => {
+            const order = snap.val();
+            if (!order) return;
+            updateStatus(order.status);
+            if (order.driver_lat && order.driver_lng) {
+                document.getElementById('map-pill').style.opacity = '0';
+                animateMarker(order.driver_lat, order.driver_lng);
+                map.fitBounds(
+                    L.latLngBounds([STORE.lat, STORE.lng], [order.driver_lat, order.driver_lng]).pad(0.3),
+                    { animate: true }
+                );
+            }
+        });
+    }
+
+    // ── STATUS UI ──────────────────────────────
+    const STATUSES = {
+        confirmed:  { badge:'badge-confirmed',  label:'⏳ Order Confirmed', steps:['done','current','',''] },
+        on_the_way: { badge:'badge-on_the_way', label:'🛵 On the Way!',     steps:['done','done','current',''] },
+        delivered:  { badge:'badge-delivered',  label:'✅ Delivered!',      steps:['done','done','done','done'] }
+    };
+    const STEP_IDS = ['step-confirmed','step-preparing','step-on_the_way','step-delivered'];
+
+    function updateStatus(status) {
+        const cfg = STATUSES[status] || STATUSES.confirmed;
+        const badge = document.getElementById('status-badge');
+        badge.className = 'status-badge ' + cfg.badge;
+        badge.textContent = cfg.label;
+        STEP_IDS.forEach((id, i) => {
+            document.getElementById(id).className = 'step-row ' + (cfg.steps[i] || '');
+        });
+    }
 </script>
 <script src="js/main.js"></script>
 </body>
