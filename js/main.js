@@ -110,11 +110,12 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 // Shopping Basket Logic
-// Force wipe carts with old drink prices (pre-v35 fix)
-if (!localStorage.getItem('byteCartV35_migrated')) {
+// Force wipe carts with old drink prices (pre-v36 fix)
+if (!localStorage.getItem('byteCartV36_migrated')) {
     localStorage.removeItem('byteCart');
     localStorage.removeItem('byteCartV34_migrated');
-    localStorage.setItem('byteCartV35_migrated', 'true');
+    localStorage.removeItem('byteCartV35_migrated');
+    localStorage.setItem('byteCartV36_migrated', 'true');
 }
 
 let cart = JSON.parse(localStorage.getItem('byteCart')) || [];
