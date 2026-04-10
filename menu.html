@@ -460,47 +460,6 @@
 </div>
 </div>
 </section>
-<!-- Best Value -->
-<section class="menu-section container relative" id="combos" style="display:none">
-<div class="menu-title-wrap gs_reveal">
-<div class="menu-title-bg" style="transform: rotate(1deg);">Bestes Preis-Leistungs-Verhältnis</div>
-</div>
-<div class="menu-grid">
-<div class="menu-item-card tilt-card gs_reveal_up" style="border-color: var(--primary);">
-<div class="menu-item-inner">
-<div class="item-header">
-<div class="item-name">Machen Sie daraus eine Mahlzeit</div>
-<div class="item-price" id="combo-price-meal">+€4.27</div>
-</div>
-<p class="item-desc">Burger + Pommes + Getränk</p>
-<span class="item-tag tag-special">⭐ Aktualisiert</span>
-<button class="btn btn-outline" id="combo-btn-meal" onclick="openComboSelection('meal', '+€4.27')" style="margin-top: 1rem; padding: 0.5rem 1rem; width: 100%;">Wählen Sie Ihre Artikel aus</button>
-</div>
-</div>
-<div class="menu-item-card tilt-card gs_reveal_up" style="border-color: var(--primary);">
-<div class="menu-item-inner">
-<div class="item-header">
-<div class="item-name">Geladene Combo</div>
-<div class="item-price" id="combo-price-loaded">+€5.34</div>
-</div>
-<p class="item-desc">Burger + beladene Pommes + Getränk</p>
-<span class="item-tag tag-spicy">🔥 Schwer</span>
-<button class="btn btn-outline" id="combo-btn-loaded" onclick="openComboSelection('loaded', '+€5.34')" style="margin-top: 1rem; padding: 0.5rem 1rem; width: 100%;">Wählen Sie Ihre Artikel aus</button>
-</div>
-</div>
-<div class="menu-item-card tilt-card gs_reveal_up" style="border-color: var(--primary); background: rgba(255,127,0,0.1);">
-<div class="menu-item-inner">
-<div class="item-header">
-<div class="item-name">GOAT Power Combo</div>
-<div class="item-price" id="combo-price-goat">+€6.41</div>
-</div>
-<p class="item-desc">GOAT Burger + Beilagen + Getränke</p>
-<span class="item-tag tag-special">🐐 Das Ultimative</span>
-<button class="btn btn-outline" id="combo-btn-goat" onclick="openComboSelection('goat', '+€6.41')" style="margin-top: 1rem; padding: 0.5rem 1rem; width: 100%;">Wählen Sie Ihre Artikel aus</button>
-</div>
-</div>
-</div>
-</section>
 <!-- Drinks (HIDDEN) -->
 <section class="menu-section container relative" id="drinks" style="display:none">
 <div class="menu-title-wrap gs_reveal">
@@ -763,73 +722,61 @@
             sections[s].push(item);
         });
 
-        container.innerHTML = SECTION_ORDER
-            .filter(s => sections[s] && sections[s].length)
-            .map(s => renderSection(s, sections[s]))
-            .join('');
+        // Fetch combo fees then render everything together
+        db.ref('settings/combos').once('value', comboSnap => {
+            const c = comboSnap.val() || {};
+            const fees = {
+                meal:   c.meal   ?? 4.27,
+                loaded: c.loaded ?? 5.34,
+                goat:   c.goat   ?? 6.41,
+            };
 
-        // Show combos with latest prices (no race condition)
-        document.getElementById('combos').style.display = '';
-        applyComboDisplay();
+            container.innerHTML = SECTION_ORDER
+                .filter(s => sections[s] && sections[s].length)
+                .map(s => renderSection(s, sections[s]))
+                .join('') + renderCombos(fees);
 
-        // Re-init VanillaTilt on new cards
-        if (typeof VanillaTilt !== 'undefined') {
-            VanillaTilt.init(container.querySelectorAll('.tilt-card'), {
-                max: 8, speed: 400, glare: true, 'max-glare': 0.15
-            });
-        }
+            if (typeof VanillaTilt !== 'undefined') {
+                VanillaTilt.init(container.querySelectorAll('.tilt-card'), {
+                    max: 8, speed: 400, glare: true, 'max-glare': 0.15
+                });
+            }
+        });
+    }
+
+    function renderCombos(fees) {
+        const cards = [
+            { type:'meal',   name:'Machen Sie daraus eine Mahlzeit', desc:'Burger + Pommes + Getränk',          tag:'⭐ Aktualisiert', cls:'tag-special', bg:'' },
+            { type:'loaded', name:'Geladene Combo',                  desc:'Burger + beladene Pommes + Getränk', tag:'🔥 Schwer',        cls:'tag-spicy',   bg:'' },
+            { type:'goat',   name:'GOAT Power Combo',                desc:'GOAT Burger + Beilagen + Getränke',  tag:'🐐 Das Ultimative',cls:'tag-special', bg:'background:rgba(255,127,0,0.1);' },
+        ].map(({ type, name, desc, tag, cls, bg }) => {
+            const label = `+€${parseFloat(fees[type]).toFixed(2)}`;
+            return `<div class="menu-item-card tilt-card" style="border-color:var(--primary);${bg}position:relative">
+                <div class="menu-item-inner">
+                    <div class="item-header">
+                        <div class="item-name">${name}</div>
+                        <div class="item-price">${label}</div>
+                    </div>
+                    <p class="item-desc">${desc}</p>
+                    <span class="item-tag ${cls}">${tag}</span>
+                    <button class="btn btn-outline" onclick="openComboSelection('${type}','${label}')"
+                        style="margin-top:1rem;padding:.5rem 1rem;width:100%">Wählen Sie Ihre Artikel aus</button>
+                </div>
+            </div>`;
+        }).join('');
+        return `<section class="menu-section container relative">
+            <div class="menu-title-wrap">
+                <div class="menu-title-bg" style="transform:rotate(1deg)">Bestes Preis-Leistungs-Verhältnis</div>
+            </div>
+            <div class="menu-grid">${cards}</div>
+        </section>`;
     }
 
     db.ref('menu').on('value', renderFromSnap);
 
-    // ── Combo prices ─────────────────────────────────────────────────
-    // Read from localStorage instantly (written every time Firebase fires)
-    // so prices are correct on every page load with zero delay.
-    const COMBO_LS_KEY = 'byte-combo-fees-v1';
-    const _stored = JSON.parse(localStorage.getItem(COMBO_LS_KEY) || '{}');
-    let latestComboFees = {
-        meal:   _stored.meal   ?? 4.27,
-        loaded: _stored.loaded ?? 5.34,
-        goat:   _stored.goat   ?? 6.41,
-    };
-
-    function applyComboDisplay() {
-        ['meal', 'loaded', 'goat'].forEach(type => {
-            const label   = `+€${parseFloat(latestComboFees[type]).toFixed(2)}`;
-            const priceEl = document.getElementById('combo-price-' + type);
-            const btnEl   = document.getElementById('combo-btn-'   + type);
-            if (priceEl) priceEl.textContent = label;
-            if (btnEl)   btnEl.setAttribute('onclick', `openComboSelection('${type}', '${label}')`);
-        });
-    }
-
-    // Firebase keeps localStorage up-to-date for next visit
-    db.ref('settings/combos').on('value', snap => {
-        const c = snap.val() || {};
-        latestComboFees = {
-            meal:   c.meal   ?? 4.27,
-            loaded: c.loaded ?? 5.34,
-            goat:   c.goat   ?? 6.41,
-        };
-        localStorage.setItem(COMBO_LS_KEY, JSON.stringify(latestComboFees));
-        applyComboDisplay();
-    });
-
-    // bfcache fix: force fresh fetch of both menu and combo fees
+    // bfcache fix
     window.addEventListener('pageshow', e => {
-        if (e.persisted) {
-            db.ref('menu').once('value', renderFromSnap);
-            db.ref('settings/combos').once('value', snap => {
-                const c = snap.val() || {};
-                latestComboFees = {
-                    meal:   c.meal   ?? 4.27,
-                    loaded: c.loaded ?? 5.34,
-                    goat:   c.goat   ?? 6.41,
-                };
-                localStorage.setItem(COMBO_LS_KEY, JSON.stringify(latestComboFees));
-                applyComboDisplay();
-            });
-        }
+        if (e.persisted) db.ref('menu').once('value', renderFromSnap);
     });
 })();
 </script>
