@@ -722,27 +722,20 @@
             sections[s].push(item);
         });
 
-        // Fetch combo fees then render everything together
-        db.ref('settings/combos').once('value', comboSnap => {
-            const c = comboSnap.val() || {};
-            const fees = {
-                meal:   c.meal   ?? 4.27,
-                loaded: c.loaded ?? 5.34,
-                goat:   c.goat   ?? 6.41,
-            };
+        container.innerHTML = SECTION_ORDER
+            .filter(s => sections[s] && sections[s].length)
+            .map(s => renderSection(s, sections[s]))
+            .join('') + renderCombos(currentFees);
 
-            container.innerHTML = SECTION_ORDER
-                .filter(s => sections[s] && sections[s].length)
-                .map(s => renderSection(s, sections[s]))
-                .join('') + renderCombos(fees);
-
-            if (typeof VanillaTilt !== 'undefined') {
-                VanillaTilt.init(container.querySelectorAll('.tilt-card'), {
-                    max: 8, speed: 400, glare: true, 'max-glare': 0.15
-                });
-            }
-        });
+        if (typeof VanillaTilt !== 'undefined') {
+            VanillaTilt.init(container.querySelectorAll('.tilt-card'), {
+                max: 8, speed: 400, glare: true, 'max-glare': 0.15
+            });
+        }
     }
+
+    // Combo fees — persisted across renders
+    let currentFees = { meal: 4.27, loaded: 5.34, goat: 6.41 };
 
     function renderCombos(fees) {
         const cards = [
@@ -755,11 +748,11 @@
                 <div class="menu-item-inner">
                     <div class="item-header">
                         <div class="item-name">${name}</div>
-                        <div class="item-price">${label}</div>
+                        <div class="item-price" id="cp-${type}">${label}</div>
                     </div>
                     <p class="item-desc">${desc}</p>
                     <span class="item-tag ${cls}">${tag}</span>
-                    <button class="btn btn-outline" onclick="openComboSelection('${type}','${label}')"
+                    <button class="btn btn-outline" id="cb-${type}" onclick="openComboSelection('${type}','${label}')"
                         style="margin-top:1rem;padding:.5rem 1rem;width:100%">Wählen Sie Ihre Artikel aus</button>
                 </div>
             </div>`;
@@ -771,6 +764,25 @@
             <div class="menu-grid">${cards}</div>
         </section>`;
     }
+
+    // Always-on listener: fires with IndexedDB cache first, then server value.
+    // Updates the rendered cards in place when server data arrives.
+    db.ref('settings/combos').on('value', snap => {
+        const c = snap.val() || {};
+        currentFees = {
+            meal:   c.meal   ?? 4.27,
+            loaded: c.loaded ?? 5.34,
+            goat:   c.goat   ?? 6.41,
+        };
+        // Update cards if already rendered
+        ['meal','loaded','goat'].forEach(type => {
+            const label = `+€${parseFloat(currentFees[type]).toFixed(2)}`;
+            const p = document.getElementById('cp-' + type);
+            const b = document.getElementById('cb-' + type);
+            if (p) p.textContent = label;
+            if (b) b.setAttribute('onclick', `openComboSelection('${type}','${label}')`);
+        });
+    });
 
     db.ref('menu').on('value', renderFromSnap);
 
