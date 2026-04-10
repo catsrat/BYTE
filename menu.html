@@ -461,7 +461,7 @@
 </div>
 </section>
 <!-- Best Value -->
-<section class="menu-section container relative" id="combos">
+<section class="menu-section container relative" id="combos" style="display:none">
 <div class="menu-title-wrap gs_reveal">
 <div class="menu-title-bg" style="transform: rotate(1deg);">Bestes Preis-Leistungs-Verhältnis</div>
 </div>
@@ -670,8 +670,6 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // On hard reload, force Firebase to reconnect (clears stale offline state)
-    db.goOnline();
 
     // Fallback: if menu is still showing spinner after 5s, force a fresh fetch
     let menuLoaded = false;
@@ -769,6 +767,9 @@
             .filter(s => sections[s] && sections[s].length)
             .map(s => renderSection(s, sections[s]))
             .join('');
+
+        // Show combos section after firebase sections are rendered (keeps position stable)
+        document.getElementById('combos').style.display = '';
 
         // Re-init VanillaTilt on new cards
         if (typeof VanillaTilt !== 'undefined') {
