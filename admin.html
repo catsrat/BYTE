@@ -1073,11 +1073,26 @@ function buildCharts() {
     });
 
     // Top items chart
+    // Handles both formats:
+    //   "- Byte Classic (€6.41)"  ← main order format
+    //   "🍟 Classic Fries x1 — €2.66"  ← upsell format
     const itemCount = {};
+    const skipKeywords = ['total','vat','delivery','net food','net drink','subtotal','items total','fee','breakdown','final'];
     orders.forEach(o => {
         (o.items||'').split('\n').forEach(line => {
-            const m = line.match(/^(.+?)\s+x\d/);
-            if (m) { const name = m[1].trim(); itemCount[name] = (itemCount[name]||0)+1; }
+            const l = line.trim();
+            if (!l) return;
+            if (skipKeywords.some(k => l.toLowerCase().includes(k))) return;
+
+            // Format 1: "- Item Name (€price)" or "- Item Name + extras (€price)"
+            const m1 = l.match(/^-\s+(.+?)\s*\(€[\d.]+\)/);
+            // Format 2: "emoji Item Name x1 — €price"
+            const m2 = l.match(/^.{0,3}\s*(.+?)\s+x\d/);
+
+            const name = (m1 ? m1[1] : m2 ? m2[1] : '').trim();
+            if (name.length > 2) {
+                itemCount[name] = (itemCount[name] || 0) + 1;
+            }
         });
     });
     const sorted = Object.entries(itemCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
