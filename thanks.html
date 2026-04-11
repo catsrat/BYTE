@@ -60,6 +60,18 @@
         color: #666 !important;
     }
 
+    /* Fix Leaflet tile seam lines on mobile/retina screens */
+    .leaflet-tile {
+        border: 0 !important;
+    }
+    .leaflet-tile-container img,
+    .leaflet-tile img {
+        image-rendering: auto;
+        border: 0 !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
     .map-pill {
         position: absolute;
         bottom: 1rem;
