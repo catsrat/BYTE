@@ -63,13 +63,19 @@
     /* Fix Leaflet tile seam lines on mobile/retina screens */
     .leaflet-tile {
         border: 0 !important;
+        outline: none !important;
     }
-    .leaflet-tile-container img,
-    .leaflet-tile img {
+    .leaflet-tile-container {
+        transform: scale(1.005);
+        transform-origin: center center;
+    }
+    .leaflet-tile-container img {
         image-rendering: auto;
         border: 0 !important;
         outline: none !important;
         box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     .map-pill {
@@ -342,7 +348,12 @@
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap © CARTO',
             subdomains: 'abcd',
-            maxZoom: 19
+            maxZoom: 19,
+            tileSize: 256,
+            zoomOffset: 0,
+            detectRetina: true,
+            updateWhenIdle: false,
+            keepBuffer: 4
         }).addTo(map);
 
         // Store marker
