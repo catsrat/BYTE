@@ -297,6 +297,37 @@ function closeFriesSelectionModal() {
     pendingFries = null;
 }
 
+// Soda Selection Modal
+let pendingSodaPrice = 0;
+
+function openSodaSelection(price) {
+    pendingSodaPrice = parseFloat(price.replace('€', ''));
+    const modal = document.getElementById('soda-selection-modal');
+    if (modal) {
+        modal.querySelectorAll('input[name="soda-type"]')[0].checked = true;
+        modal.classList.add('active');
+    }
+}
+
+function closeSodaModal() {
+    document.getElementById('soda-selection-modal').classList.remove('active');
+}
+
+function confirmSodaSelection() {
+    const selected = document.querySelector('input[name="soda-type"]:checked');
+    if (!selected) return;
+    const name = selected.value;
+    cart.push({ name, price: pendingSodaPrice, foodGross: 0, beverageGross: pendingSodaPrice });
+    saveCart();
+    if (cart.length === 1) toggleBasket(true);
+    closeSodaModal();
+    updateBasketUI();
+    const btn = document.getElementById('confirm-soda-btn');
+    const orig = btn.innerText;
+    btn.innerText = 'Hinzugefügt! ✅';
+    setTimeout(() => { btn.innerText = orig; }, 1500);
+}
+
 function confirmFriesSelection() {
     if (!pendingFries) return;
     
@@ -634,6 +665,33 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         document.body.insertAdjacentHTML('beforeend', friesModalHTML);
     }
+
+    // Soda Selection Modal
+    if (!document.getElementById('soda-selection-modal')) {
+        const sodaModal = `
+            <div class="combo-modal" id="soda-selection-modal" style="z-index: 10001;">
+                <div class="modal-content">
+                    <h2 class="modal-title">🥤 Wählen Sie Ihr Getränk</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 1.02rem;">Welches Softdrink möchten Sie?</p>
+                    <div class="extras-list">
+                        ${['Coca-Cola','Fanta','Sprite','Pepsi'].map((s,i) => `
+                        <label class="extra-item" style="cursor:pointer;">
+                            <div class="extra-info">
+                                <span class="extra-name">${s}</span>
+                            </div>
+                            <input type="radio" name="soda-type" value="${s}" ${i===0?'checked':''}>
+                        </label>`).join('')}
+                    </div>
+                    <div style="display:flex; gap:1rem; margin-top:2rem;">
+                        <button class="btn btn-outline" style="flex:1" onclick="closeSodaModal()">Abbrechen</button>
+                        <button class="btn" id="confirm-soda-btn" style="flex:1" onclick="confirmSodaSelection()">Zum Warenkorb hinzufügen</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', sodaModal);
+    }
+
     updateBasketUI();
 });
 

@@ -485,7 +485,7 @@
 <div class="item-price">€2.68</div>
 </div>
 <p class="item-desc">Coca-Cola / Fanta / Sprite</p>
-<button class="btn btn-outline" onclick="addToCart('Sodas', '€2.68')" style="margin-top: 1rem; padding: 0.5rem 1rem; width: 100%;">Zum Warenkorb hinzufügen</button>
+<button class="btn btn-outline" onclick="openSodaSelection('€2.68')" style="margin-top: 1rem; padding: 0.5rem 1rem; width: 100%;">Zum Warenkorb hinzufügen</button>
 </div>
 </div>
 <div class="menu-item-card tilt-card gs_reveal_up">
@@ -666,6 +666,7 @@
     function getAddToCartFn(item, section) {
         if (section === 'Burgers') return `addBurgerToCart('${esc(item.name)}', '€${item.price.toFixed(2)}')`;
         if (item.name === 'Classic Fries') return `openFriesSelection('${esc(item.name)}', '€${item.price.toFixed(2)}')`;
+        if (item.name === 'Sodas') return `openSodaSelection('€${item.price.toFixed(2)}')`;
         return `addToCart('${esc(item.name)}', '€${item.price.toFixed(2)}')`;
     }
 
