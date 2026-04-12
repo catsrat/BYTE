@@ -445,34 +445,55 @@ function checkout() {
     const total = cart.reduce((sum, item) => sum + item.price, 0);
     let finalOrder = `${itemsSummary}\n\nItems Total: €${total.toFixed(2)}`;
     
-    // Internal VAT Calculation (German Rules)
+    // ── VAT Calculation — Germany compliant, per-item rounding ──────────────
+    const round2 = v => Math.round(v * 100) / 100;
 
-    const totalFoodGross = cart.reduce((sum, item) => {
-        let fg = item.foodGross !== undefined ? item.foodGross : (isBeverage(item.name) ? 0 : item.price);
-        return sum + fg;
-    }, 0);
-    
-    const totalBevGross = cart.reduce((sum, item) => {
-        let bg = item.beverageGross !== undefined ? item.beverageGross : (isBeverage(item.name) ? item.price : 0);
-        return sum + bg;
-    }, 0);
-    
-    const totalNetFood = totalFoodGross / 1.07;
-    const totalNetBev = totalBevGross / 1.19;
-    
-    const vatFood = totalFoodGross - totalNetFood;
-    const vatBev = totalBevGross - totalNetBev;
-    
+    let total_net_food = 0, total_vat_7 = 0;
+    let total_net_bev  = 0, total_vat_19 = 0;
+
+    cart.forEach(item => {
+        const fg = item.foodGross     !== undefined ? item.foodGross     : (isBeverage(item.name) ? 0 : item.price);
+        const bg = item.beverageGross !== undefined ? item.beverageGross : (isBeverage(item.name) ? item.price : 0);
+
+        if (fg > 0) {
+            const net = round2(fg / 1.07);
+            const vat = round2(fg - net);
+            total_net_food += net;
+            total_vat_7    += vat;
+        }
+        if (bg > 0) {
+            const net = round2(bg / 1.19);
+            const vat = round2(bg - net);
+            total_net_bev  += net;
+            total_vat_19   += vat;
+        }
+    });
+
+    total_net_food = round2(total_net_food);
+    total_vat_7    = round2(total_vat_7);
+    total_net_bev  = round2(total_net_bev);
+    total_vat_19   = round2(total_vat_19);
+
+    const total_net = round2(total_net_food + total_net_bev);
+    const total_vat = round2(total_vat_7 + total_vat_19);
+    const final_total = round2(total_net + total_vat);
+
+    // Edge-case safety: adjust largest VAT line if ±0.01 drift
+    const sum_gross = round2(cart.reduce((s, i) => s + i.price, 0));
+    const diff = round2(final_total - sum_gross);
+    if (diff !== 0) {
+        if (total_vat_7 >= total_vat_19) total_vat_7 = round2(total_vat_7 - diff);
+        else                             total_vat_19 = round2(total_vat_19 - diff);
+    }
+
     const internalVatBreakdown = {
-        food_gross_total: totalFoodGross,
-        beverage_gross_total: totalBevGross,
-        net_food_total: totalNetFood,
-        net_beverage_total: totalNetBev,
-        vat_7_total: vatFood,
-        vat_19_total: vatBev,
-        total_vat: vatFood + vatBev,
-        total_net: totalNetFood + totalNetBev,
-        gross_total: total
+        net_food:          round2(total_net_food),
+        vat_7:             round2(total_vat_7),
+        net_beverage:      round2(total_net_bev),
+        vat_19:            round2(total_vat_19),
+        total_net:         round2(total_net_food + total_net_bev),
+        total_vat:         round2(total_vat_7 + total_vat_19),
+        gross_total:       sum_gross
     };
     localStorage.setItem('byteOrderVATDetails', JSON.stringify(internalVatBreakdown));
     
