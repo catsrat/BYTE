@@ -170,7 +170,8 @@
 
                 const total_vat   = round2(vatData.vat_7 + vatData.vat_19 + delivery_vat);
                 const total_net   = round2(vatData.net_food + vatData.net_beverage + delivery_net);
-                const gross_total = round2(vatData.gross_total + delivery_gross);
+                const items_gross = round2(vatData.net_food + vatData.vat_7 + vatData.net_beverage + vatData.vat_19);
+                const gross_total = round2(items_gross + delivery_gross);
 
                 localStorage.setItem('byteOrderVATDetails', JSON.stringify({
                     ...vatData,
