@@ -1,4 +1,4 @@
-const CACHE = 'byte-v1';
+const CACHE = 'byte-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {
@@ -18,6 +18,11 @@ self.addEventListener('fetch', e => {
         e.respondWith(
             fetch(e.request).catch(() => caches.match(e.request))
         );
+        return;
+    }
+
+    // Video files: skip SW entirely — let browser handle range requests natively
+    if (url.pathname.endsWith('.mp4') || url.pathname.endsWith('.webm')) {
         return;
     }
 
