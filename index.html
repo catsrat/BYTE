@@ -288,7 +288,7 @@
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
     <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-    <script>
+    <script defer>
     (function() {
         const firebaseConfig = {
             apiKey: "AIzaSyCfAfJkP9EsxPR1Zp7J8jctgSoxIfM_gbE",
@@ -302,16 +302,12 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        db.ref('menu').once('value', snap => {
-            const data = snap.val();
+        function renderHomeMenu(data) {
             const grid = document.getElementById('home-menu-grid');
             if (!data) return;
-
-            // Show only Burgers section, max 9 items
             const burgers = Object.values(data)
                 .filter(item => item.section === 'Burgers' && item.available !== false)
                 .slice(0, 9);
-
             grid.innerHTML = burgers.map(item => `
                 <div class="simple-card">
                     <h3>${item.emoji ? item.emoji + ' ' : ''}${item.name}</h3>
@@ -322,10 +318,22 @@
                     </div>
                 </div>
             `).join('');
-
             if (typeof VanillaTilt !== 'undefined') {
                 VanillaTilt.init(grid.querySelectorAll('.simple-card'), { max:8, speed:400, glare:true, 'max-glare':0.1 });
             }
+        }
+
+        // Show cached data instantly, then refresh from Firebase in background
+        try {
+            const cached = localStorage.getItem('byteHomeMenu');
+            if (cached) renderHomeMenu(JSON.parse(cached));
+        } catch(e) {}
+
+        db.ref('menu').once('value', snap => {
+            const data = snap.val();
+            if (!data) return;
+            try { localStorage.setItem('byteHomeMenu', JSON.stringify(data)); } catch(e) {}
+            renderHomeMenu(data);
         });
     })();
     </script>

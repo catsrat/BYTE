@@ -619,13 +619,13 @@
 </div>
 </footer>
 <!-- GSAP & VanillaTilt -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="js/main.js"></script>
-<script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script defer src="js/main.js"></script>
+<script defer>
 // ── DYNAMIC MENU FROM FIREBASE ────────────────────────────────────────────
 (function() {
     const firebaseConfig = {
@@ -797,11 +797,26 @@
         });
     });
 
-    db.ref('menu').on('value', renderFromSnap);
+    // Show cached menu instantly, then live Firebase listener updates in background
+    try {
+        const cached = localStorage.getItem('byteMenuCache');
+        if (cached) {
+            const fakeSnap = { val: () => JSON.parse(cached) };
+            renderFromSnap(fakeSnap);
+        }
+    } catch(e) {}
+
+    db.ref('menu').on('value', snap => {
+        try { localStorage.setItem('byteMenuCache', JSON.stringify(snap.val())); } catch(e) {}
+        renderFromSnap(snap);
+    });
 
     // bfcache fix
     window.addEventListener('pageshow', e => {
-        if (e.persisted) db.ref('menu').once('value', renderFromSnap);
+        if (e.persisted) db.ref('menu').once('value', snap => {
+            try { localStorage.setItem('byteMenuCache', JSON.stringify(snap.val())); } catch(e) {}
+            renderFromSnap(snap);
+        });
     });
 })();
 </script>
