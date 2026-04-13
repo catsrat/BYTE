@@ -441,12 +441,16 @@ function isStoreOpen(settings) {
     const now = new Date();
     const day = DAYS[now.getDay()];
     const h = (settings.hours || {})[day];
-    if (!h || h.closed) return false;
+    // No hours configured for this day → don't block
+    if (!h) return true;
+    if (h.closed) return false;
     const [openH, openM]  = (h.open  || '00:00').split(':').map(Number);
     const [closeH, closeM] = (h.close || '00:00').split(':').map(Number);
-    const cur = now.getHours() * 60 + now.getMinutes();
     const open  = openH  * 60 + openM;
     const close = closeH * 60 + closeM;
+    // Both 00:00 means not configured → don't block
+    if (open === 0 && close === 0) return true;
+    const cur = now.getHours() * 60 + now.getMinutes();
     // Handle overnight (e.g. 18:00 – 02:00)
     if (close < open) return cur >= open || cur < close;
     return cur >= open && cur < close;
