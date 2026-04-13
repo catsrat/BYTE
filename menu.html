@@ -605,7 +605,8 @@
 </div>
 <div class="footer-col">
 <h3>Kontaktieren Sie uns</h3>
-<p>Telefon: <span class="text-primary">0212315737</span></p>
+<p>Telefon: <span class="text-primary" id="footer-phone"></span></p>
+<script>document.getElementById('footer-phone').textContent = CONFIG.phone;</script>
 <p>Sozial: <span class="text-primary">@Byte</span></p>
 <div class="social-links">
 <a href="#">FB</a>
@@ -622,23 +623,15 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+<script src="js/config.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="js/main.js"></script>
 <script>
 // ── DYNAMIC MENU FROM FIREBASE ────────────────────────────────────────────
 (function() {
-    const firebaseConfig = {
-        apiKey: "AIzaSyCfAfJkP9EsxPR1Zp7J8jctgSoxIfM_gbE",
-        authDomain: "byte-34c84.firebaseapp.com",
-        databaseURL: "https://byte-34c84-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "byte-34c84",
-        storageBucket: "byte-34c84.firebasestorage.app",
-        messagingSenderId: "700610883011",
-        appId: "1:700610883011:web:b7e6f16233b67d7976e176"
-    };
 
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) firebase.initializeApp(CONFIG.firebase);
     const db = firebase.database();
     window._menuDb = db;
 

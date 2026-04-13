@@ -231,21 +231,13 @@
     <div class="orders-list" id="orders-list"></div>
 </div>
 
+<script src="js/config.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
     let DRIVER_PIN = '2580'; // default — overridden by Firebase on load
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyCfAfJkP9EsxPR1Zp7J8jctgSoxIfM_gbE",
-        authDomain: "byte-34c84.firebaseapp.com",
-        databaseURL: "https://byte-34c84-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "byte-34c84",
-        storageBucket: "byte-34c84.firebasestorage.app",
-        messagingSenderId: "700610883011",
-        appId: "1:700610883011:web:b7e6f16233b67d7976e176"
-    };
-    firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(CONFIG.firebase);
     const db = firebase.database();
 
     let gpsInterval = null;

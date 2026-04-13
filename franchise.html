@@ -139,6 +139,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+<script src="js/config.js"></script>
 <script src="js/main.js"></script>
+<script>
+    var f = document.querySelector('.apply-form');
+    if (f) f.action = 'https://formsubmit.co/' + CONFIG.formsubmitEmail;
+    var ph = document.querySelector('.footer-col .text-primary');
+    if (ph) ph.textContent = CONFIG.phone;
+</script>
 </body>
 </html>

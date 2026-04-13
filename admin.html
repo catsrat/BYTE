@@ -560,6 +560,7 @@ label.form-label { font-size:.78rem; color:var(--muted); display:block; margin-b
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="js/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
@@ -568,19 +569,10 @@ label.form-label { font-size:.78rem; color:var(--muted); display:block; margin-b
 let ADMIN_PIN = '1234'; // default — overridden by Firebase on load
 let adminPinReady = false;
 
-const firebaseConfig = {
-    apiKey: "AIzaSyCfAfJkP9EsxPR1Zp7J8jctgSoxIfM_gbE",
-    authDomain: "byte-34c84.firebaseapp.com",
-    databaseURL: "https://byte-34c84-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "byte-34c84",
-    storageBucket: "byte-34c84.firebasestorage.app",
-    messagingSenderId: "700610883011",
-    appId: "1:700610883011:web:b7e6f16233b67d7976e176"
-};
-firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(CONFIG.firebase);
 const db = firebase.database();
 
-const STORE = { lat: 51.178389, lng: 7.031451 };
+const STORE = { lat: CONFIG.coords.lat, lng: CONFIG.coords.lng };
 
 // Load admin PIN from Firebase
 db.ref('settings/adminPin').once('value', snap => {

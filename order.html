@@ -118,22 +118,13 @@
 <button class="btn" onclick="closeCashModal()" style="width: 100%; margin-top: 1.5rem; background: var(--bg-dark);" type="button">Zurück</button>
 </div>
 </div>
+<script src="js/config.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script>
-        const STORE_COORDS = { lat: 51.178389, lon: 7.031451 };
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCfAfJkP9EsxPR1Zp7J8jctgSoxIfM_gbE",
-            authDomain: "byte-34c84.firebaseapp.com",
-            databaseURL: "https://byte-34c84-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "byte-34c84",
-            storageBucket: "byte-34c84.firebasestorage.app",
-            messagingSenderId: "700610883011",
-            appId: "1:700610883011:web:b7e6f16233b67d7976e176"
-        };
-        firebase.initializeApp(firebaseConfig);
+        const STORE_COORDS = { lat: CONFIG.coords.lat, lon: CONFIG.coords.lng };
+        firebase.initializeApp(CONFIG.firebase);
         const db = firebase.database();
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -371,7 +362,7 @@
             const formData = new FormData(form);
             formData.append('Order_ID', '#' + orderId);
 
-            fetch('https://formsubmit.co/pvsheram001@Gmail.com', {
+            fetch('https://formsubmit.co/' + CONFIG.formsubmitEmail, {
                 method: 'POST',
                 body: formData,
                 headers: { 'Accept': 'application/json' },
