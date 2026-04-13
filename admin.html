@@ -288,6 +288,7 @@ label.form-label { font-size:.78rem; color:var(--muted); display:block; margin-b
     <img src="images/logo-white.png" alt="BYTE Burgers"/>
     <div class="pin-label">Restricted Access</div>
     <div class="pin-title">Admin Panel</div>
+    <div id="pin-stats" style="display:flex;gap:1.5rem;margin:.5rem 0 .25rem;justify-content:center"></div>
     <div class="pin-digits">
         <input class="pin-digit" id="p1" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
         <input class="pin-digit" id="p2" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
@@ -416,6 +417,21 @@ label.form-label { font-size:.78rem; color:var(--muted); display:block; margin-b
 
         <!-- SETTINGS -->
         <div class="tab-panel" id="tab-settings">
+            <div class="settings-section">
+                <div class="section-title">Prep Time</div>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-label">Estimated Prep Time</div>
+                        <div class="settings-sub">Shown to customers on the tracking page</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.4rem">
+                        <input type="number" id="prep-time" style="width:60px;text-align:center" value="20" step="5" min="5" max="90"/>
+                        <span style="color:var(--muted);font-size:.85rem">min</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="savePrepTime()" style="margin-top:.5rem">Save</button>
+            </div>
+
             <div class="settings-section">
                 <div class="section-title">Shop Status</div>
                 <div class="settings-row">
@@ -580,6 +596,27 @@ db.ref('settings/adminPin').once('value', snap => {
     adminPinReady = true;
 });
 setTimeout(() => { adminPinReady = true; }, 3000); // fallback
+
+// ── Dashboard stats on pin screen ───────────────────────────────────────────
+db.ref('orders').once('value', snap => {
+    const all = snap.val();
+    if (!all) return;
+    const todayStr = new Date().toISOString().slice(0,10);
+    const todayOrders = Object.values(all).filter(o => (o.timestamp||'').startsWith(todayStr));
+    const revenue = todayOrders.reduce((s,o) => s + (o.total||0), 0);
+    const statsEl = document.getElementById('pin-stats');
+    if (!statsEl) return;
+    statsEl.innerHTML = `
+        <div style="text-align:center;background:rgba(255,127,0,0.1);border:1px solid rgba(255,127,0,0.3);border-radius:12px;padding:.6rem 1.2rem">
+            <div style="font-size:1.4rem;font-weight:900;color:var(--primary)">€${revenue.toFixed(0)}</div>
+            <div style="font-size:.7rem;color:#888;text-transform:uppercase;letter-spacing:1px">Today's Revenue</div>
+        </div>
+        <div style="text-align:center;background:rgba(255,127,0,0.1);border:1px solid rgba(255,127,0,0.3);border-radius:12px;padding:.6rem 1.2rem">
+            <div style="font-size:1.4rem;font-weight:900;color:var(--primary)">${todayOrders.length}</div>
+            <div style="font-size:.7rem;color:#888;text-transform:uppercase;letter-spacing:1px">Orders Today</div>
+        </div>
+    `;
+});
 
 // ── PIN ──────────────────────────────────────────────────────────────────────
 const digits = ['p1','p2','p3','p4'].map(id => document.getElementById(id));
@@ -1266,11 +1303,20 @@ function applySettings() {
         document.getElementById('min-order').value = settingsData.minOrder;
     if (settingsData.deliveryRadius !== undefined)
         document.getElementById('delivery-radius').value = settingsData.deliveryRadius;
+    // Prep time
+    if (settingsData.prepTime !== undefined)
+        document.getElementById('prep-time').value = settingsData.prepTime;
 }
 
 function loadSettings() {
     applySettings();
     updateHoursGrid();
+}
+
+function savePrepTime() {
+    const val = parseInt(document.getElementById('prep-time').value) || 20;
+    db.ref('settings/prepTime').set(val);
+    showToast('⏱ Prep time set to ' + val + ' min');
 }
 
 function toggleHoliday(val) {

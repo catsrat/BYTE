@@ -396,6 +396,13 @@ function removeFromCart(index) {
     saveCart();
 }
 
+function updateItemNote(index, note) {
+    if (cart[index]) {
+        cart[index].note = note;
+        saveCart();
+    }
+}
+
 function toggleBasket(show) {
     const drawer = document.getElementById('basket-drawer');
     if (show === true) drawer.classList.add('active');
@@ -426,6 +433,10 @@ function updateBasketUI() {
             <div class="basket-item-info">
                 <h4>${item.name}</h4>
                 <p>€${item.price.toFixed(2)}</p>
+                <input type="text" placeholder="Note (e.g. no onions)" value="${item.note||''}"
+                    oninput="updateItemNote(${index}, this.value)"
+                    style="margin-top:.35rem;width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);
+                    border-radius:8px;padding:.3rem .6rem;color:#fff;font-size:.78rem;font-family:inherit;outline:none"/>
             </div>
             <button class="remove-item" onclick="removeFromCart(${index})">Entfernen</button>
         `;

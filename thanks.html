@@ -260,6 +260,10 @@
         </div>
 
         <div class="order-ref" id="order-ref"></div>
+        <div id="prep-time-pill" style="display:none;background:rgba(255,127,0,0.1);border:1px solid rgba(255,127,0,0.3);
+             border-radius:50px;padding:.4rem 1.2rem;font-size:.85rem;font-weight:700;color:var(--primary);text-align:center">
+             ⏱ Estimated prep time: <span id="prep-time-val">20</span> min
+        </div>
         <div id="eta-pill" style="display:none;background:rgba(68,255,136,0.08);border:1px solid rgba(68,255,136,0.25);
              border-radius:50px;padding:.4rem 1.1rem;font-size:.85rem;font-weight:700;color:#44ff88;text-align:center"></div>
 
@@ -341,6 +345,15 @@
     const db = firebase.database();
 
     const STORE = { lat: CONFIG.coords.lat, lng: CONFIG.coords.lng };
+
+    // Show estimated prep time
+    db.ref('settings/prepTime').once('value', snap => {
+        const t = snap.val();
+        if (t) {
+            document.getElementById('prep-time-val').textContent = t;
+            document.getElementById('prep-time-pill').style.display = 'block';
+        }
+    });
     // Support refresh: orderId and type are also passed as URL params
     const params    = new URLSearchParams(window.location.search);
     const orderType = sessionStorage.getItem('byteOrderType') || params.get('type');
