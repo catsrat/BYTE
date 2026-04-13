@@ -289,7 +289,7 @@
                     document.getElementById('fulfillment-selector').scrollIntoView({ behavior: 'smooth' });
                     return;
                 }
-                if (orderType === 'PICKUP') {
+                if (orderType === 'pickup') {
                     document.getElementById('payment-field').value = 'CASH: Pickup — Customer pays at store.';
                     checkoutForm.dataset.cashConfirmed = 'true';
                     sessionStorage.setItem('byteOrderType', 'pickup');
