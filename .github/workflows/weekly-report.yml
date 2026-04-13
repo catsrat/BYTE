@@ -9,105 +9,18 @@ jobs:
   send-report:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install nodemailer
+      - name: Install dependencies
         run: npm install nodemailer
+        working-directory: .github/scripts
 
-      - name: Write report script
-        run: |
-          cat > report.js << 'SCRIPTEOF'
-          const https = require('https');
-          const nodemailer = require('nodemailer');
-          function fetchFirebase(path) {
-            return new Promise((resolve, reject) => {
-              const url = process.env.FIREBASE_DB_URL + '/' + path + '.json?auth=' + process.env.FIREBASE_DB_SECRET;
-              https.get(url, res => {
-                let data = '';
-                res.on('data', c => data += c);
-                res.on('end', () => { try { resolve(JSON.parse(data)); } catch(e) { resolve(null); } });
-              }).on('error', reject);
-            });
-          }
-          (async () => {
-            const now = Date.now();
-            const start = now - 7 * 24 * 60 * 60 * 1000;
-            const allOrders = await fetchFirebase('orders');
-            if (!allOrders) { console.log('No orders'); return; }
-            const orders = Object.values(allOrders).filter(o => o.created_at >= start);
-            const totalOrders = orders.length;
-            const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
-            const avgOrder = totalOrders ? totalRevenue / totalOrders : 0;
-            const deliveries = orders.filter(o => o.type === 'delivery').length;
-            const pickups = orders.filter(o => o.type === 'pickup').length;
-            const skip = ['total','vat','delivery','net food','net drink','subtotal','items total','fee','breakdown','final'];
-            const itemCount = {};
-            orders.forEach(o => {
-              (o.items || '').split('\n').forEach(line => {
-                const l = line.trim();
-                if (!l || skip.some(k => l.toLowerCase().includes(k))) return;
-                const m = l.match(/^-\s+(.+?)\s*\(.*[\d.]+\)/);
-                const name = m ? m[1].trim() : '';
-                if (name.length > 2) itemCount[name] = (itemCount[name] || 0) + 1;
-              });
-            });
-            const topItems = Object.entries(itemCount).sort((a,b)=>b[1]-a[1]).slice(0,5)
-              .map(([n,c],i) => (i+1)+'. '+n+' - '+c+'x').join('\n') || 'No data yet';
-            const hourBuckets = Array(24).fill(0);
-            orders.forEach(o => hourBuckets[new Date(o.created_at).getHours()]++);
-            const peakHour = hourBuckets.indexOf(Math.max(...hourBuckets));
-            const peakStr = totalOrders ? peakHour+':00 - '+(peakHour+1)+':00 ('+hourBuckets[peakHour]+' orders)' : 'N/A';
-            const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-            const dayRev = Array(7).fill(0), dayOrd = Array(7).fill(0);
-            orders.forEach(o => { const d = new Date(o.created_at).getDay(); dayRev[d]+=(o.total||0); dayOrd[d]++; });
-            const byDay = dayNames.map((d,i) => d+': '+dayOrd[i]+' orders - EUR '+dayRev[i].toFixed(2)).join('\n');
-            const ws = new Date(start).toLocaleDateString('de-DE');
-            const we = new Date(now).toLocaleDateString('de-DE');
-            const body = [
-              'BYTE Burgers - Weekly Summary',
-              ws + ' to ' + we,
-              '================================',
-              '',
-              'ORDERS',
-              '  Total:      ' + totalOrders,
-              '  Deliveries: ' + deliveries,
-              '  Pickups:    ' + pickups,
-              '',
-              'REVENUE',
-              '  Total:   EUR ' + totalRevenue.toFixed(2),
-              '  Average: EUR ' + avgOrder.toFixed(2),
-              '',
-              'TOP 5 ITEMS',
-              topItems,
-              '',
-              'BUSIEST HOUR: ' + peakStr,
-              '',
-              'BY DAY',
-              byDay,
-              '',
-              '--------------------------------',
-              'Analytics: https://byteburgers.shop/admin.html'
-            ].join('\n');
-            console.log(body);
-            const t = nodemailer.createTransport({
-              service: 'gmail',
-              auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
-            });
-            await t.sendMail({
-              from: '"BYTE Burgers" <' + process.env.GMAIL_USER + '>',
-              to: process.env.REPORT_EMAIL,
-              subject: 'BYTE Burgers Weekly Report ' + ws + ' to ' + we,
-              text: body
-            });
-            console.log('Sent!');
-          })();
-          SCRIPTEOF
-
-      - name: Run report
-        run: node report.js
+      - name: Send weekly report
+        run: node .github/scripts/weekly-report.js
         env:
           FIREBASE_DB_URL: ${{ secrets.FIREBASE_DB_URL }}
           FIREBASE_DB_SECRET: ${{ secrets.FIREBASE_DB_SECRET }}
