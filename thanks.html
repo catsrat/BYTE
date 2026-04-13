@@ -268,6 +268,16 @@
             <a class="call-link" href="tel:+49212315737">0212 315737</a>
         </div>
 
+        <div id="review-box-delivery" style="display:none;width:100%;max-width:380px;background:linear-gradient(135deg,rgba(255,127,0,0.12),rgba(255,127,0,0.05));border:1px solid rgba(255,127,0,0.4);border-radius:18px;padding:1.25rem 1.5rem;text-align:center;">
+            <div style="font-size:1.5rem;margin-bottom:.4rem;">⭐⭐⭐⭐⭐</div>
+            <div style="font-weight:800;font-size:1rem;margin-bottom:.3rem;">Hat es geschmeckt?</div>
+            <div style="font-size:.85rem;color:#aaa;margin-bottom:1rem;">Hinterlasse uns eine Google-Bewertung!</div>
+            <a href="https://maps.app.goo.gl/sFAPyQW8HifLWtUH6" target="_blank" rel="noopener"
+               style="display:inline-block;background:var(--primary);color:#fff;font-weight:800;font-size:.95rem;padding:.7rem 2rem;border-radius:50px;text-decoration:none;letter-spacing:.5px;">
+               ⭐ Jetzt bewerten
+            </a>
+        </div>
+
         <div class="btn-row">
             <a class="btn" href="menu.html">Erneut bestellen</a>
             <a class="btn" href="index.html" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;">Startseite</a>
@@ -300,6 +310,16 @@
     </div>
 
     <div class="order-ref" id="pickup-order-ref"></div>
+
+    <div id="review-box-pickup" style="display:none;width:100%;max-width:380px;background:linear-gradient(135deg,rgba(255,127,0,0.12),rgba(255,127,0,0.05));border:1px solid rgba(255,127,0,0.4);border-radius:18px;padding:1.25rem 1.5rem;text-align:center;">
+        <div style="font-size:1.5rem;margin-bottom:.4rem;">⭐⭐⭐⭐⭐</div>
+        <div style="font-weight:800;font-size:1rem;margin-bottom:.3rem;">Hat es geschmeckt?</div>
+        <div style="font-size:.85rem;color:#aaa;margin-bottom:1rem;">Hinterlasse uns eine Google-Bewertung!</div>
+        <a href="https://maps.app.goo.gl/sFAPyQW8HifLWtUH6" target="_blank" rel="noopener"
+           style="display:inline-block;background:var(--primary);color:#fff;font-weight:800;font-size:.95rem;padding:.7rem 2rem;border-radius:50px;text-decoration:none;letter-spacing:.5px;">
+           ⭐ Jetzt bewerten
+        </a>
+    </div>
 
     <div class="call-box" style="margin-top:0.5rem;">
         <p>Fragen zu deiner Bestellung?</p>
@@ -379,6 +399,10 @@
                 if ('Notification' in window && Notification.permission === 'granted') {
                     new Notification('BYTE Burgers 🍔', { body: 'Deine Bestellung ist bereit zur Abholung!', icon: '/images/logo.png' });
                 }
+            }
+            // Show review box after collected
+            if (o.status === 'delivered') {
+                document.getElementById('review-box-pickup').style.display = 'block';
             }
         });
     }
@@ -462,6 +486,7 @@
             }
             if (order.status === 'delivered') {
                 document.getElementById('eta-pill').style.display = 'none';
+                document.getElementById('review-box-delivery').style.display = 'block';
             }
             if (order.status === 'delivered') {
                 // Remove driver marker and re-centre on store
