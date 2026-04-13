@@ -708,9 +708,10 @@ function renderOrders() {
 function orderCardHTML(id, o) {
     const time = new Date(o.created_at).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     const statusClass = 's-' + (o.status||'confirmed');
+    const isPickup = (o.type||'').toLowerCase() === 'pickup';
     const statusLabel = {
         confirmed:'⏳ Confirmed', preparing:'🔥 Preparing', ready:'✅ Ready',
-        on_the_way:'🛵 On the Way', delivered:'📦 Delivered'
+        on_the_way:'🛵 On the Way', delivered: isPickup ? '🏠 Picked Up' : '📦 Delivered'
     }[o.status] || o.status;
     const typeIcon = o.type === 'delivery' ? '🚴' : '🏠';
     const preview = (o.items||'').split('\n').slice(0,2).join(' · ');
@@ -771,7 +772,7 @@ function openOrderModal(id) {
     document.getElementById('modal-order-id').textContent = '#' + id;
     const time = new Date(o.created_at).toLocaleString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     document.getElementById('modal-body').innerHTML = `
-        <div class="modal-row"><span class="modal-label">Status</span><span class="modal-val status-tag s-${o.status}">${o.status}</span></div>
+        <div class="modal-row"><span class="modal-label">Status</span><span class="modal-val status-tag s-${o.status}">${o.status === 'delivered' && (o.type||'').toLowerCase() === 'pickup' ? 'picked up' : o.status}</span></div>
         <div class="modal-row"><span class="modal-label">Type</span><span class="modal-val">${o.type||'—'}</span></div>
         <div class="modal-row"><span class="modal-label">Time</span><span class="modal-val">${time}</span></div>
         <div class="modal-row"><span class="modal-label">Name</span><span class="modal-val">${o.name||'—'}</span></div>
