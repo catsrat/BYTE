@@ -127,147 +127,148 @@
         firebase.initializeApp(CONFIG.firebase);
         const db = firebase.database();
 
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Radius of the earth in km
-            const dLat = deg2rad(lat2 - lat1);
-            const dLon = deg2rad(lon2 - lon1);
-            const a = 
-                Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-                Math.sin(dLon/2) * Math.sin(dLon/2); 
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-            return R * c; // Distance in km
+        // ── SINGLE SOURCE OF TRUTH ──────────────────────────────────────────
+        // orderCart is the canonical state. All VAT and receipt text are derived from it.
+        const orderCart = { items: [], deliveryFee: 0 };
+        const round2 = v => Math.round(v * 100) / 100;
+
+        const BEVERAGES_KW = ['coca-cola','fanta','sprite','water','wasser','shake','soda','drink',
+                              'cola','juice','lemon','beer','bier','kaffee','coffee','tea','tee','milkshake','mineral'];
+
+        function classifyItem(item) {
+            if (item.foodGross !== undefined || item.beverageGross !== undefined) {
+                return { foodGross: item.foodGross || 0, beverageGross: item.beverageGross || 0 };
+            }
+            const isBev = BEVERAGES_KW.some(k => item.name.toLowerCase().includes(k));
+            return isBev ? { foodGross: 0, beverageGross: item.price }
+                         : { foodGross: item.price, beverageGross: 0 };
         }
 
-        function deg2rad(deg) {
-            return deg * (Math.PI/180);
-        }
+        function recalculateOrder() {
+            let net_food = 0, vat_7 = 0, net_bev = 0, vat_19 = 0, items_gross = 0;
 
-        function processOrderVAT(fee, distance, isConfirmed) {
-            const itemsField = document.getElementById('items-field');
-            if (!itemsField.dataset.baseItems) return;
-            const round2 = v => Math.round(v * 100) / 100;
+            orderCart.items.forEach(item => {
+                const { foodGross, beverageGross } = classifyItem(item);
+                if (foodGross > 0) {
+                    const net = round2(foodGross / 1.07);
+                    net_food += net;
+                    vat_7    += round2(foodGross - net);
+                }
+                if (beverageGross > 0) {
+                    const net = round2(beverageGross / 1.19);
+                    net_bev  += net;
+                    vat_19   += round2(beverageGross - net);
+                }
+                items_gross = round2(items_gross + item.price);
+            });
 
-            // STEP 1: Base items block — strip any previous VAT section
-            const baseItems = itemsField.dataset.baseItems.split('\n\n--- VAT Breakdown ---')[0]
-                                                           .split('\n\nDelivery Fee:')[0];
+            net_food = round2(net_food); vat_7  = round2(vat_7);
+            net_bev  = round2(net_bev);  vat_19 = round2(vat_19);
 
-            // STEP 2: Load VAT data calculated from full item list
-            const storedVat = localStorage.getItem('byteOrderVATDetails');
-            if (!storedVat) { itemsField.value = baseItems; return; }
-            const vatData = JSON.parse(storedVat);
-
-            // STEP 3: Delivery fee VAT (19%)
-            const delivery_gross = round2(fee);
-            const delivery_net   = round2(fee / 1.19);
+            const delivery_gross = round2(orderCart.deliveryFee);
+            const delivery_net   = round2(delivery_gross / 1.19);
             const delivery_vat   = round2(delivery_gross - delivery_net);
 
-            // STEP 4: Full order totals
-            const items_gross = round2(vatData.items_gross || (vatData.net_food + vatData.vat_7 + vatData.net_beverage + vatData.vat_19));
+            const total_vat   = round2(vat_7 + vat_19 + delivery_vat);
             const gross_total = round2(items_gross + delivery_gross);
-            const total_vat   = round2(vatData.vat_7 + vatData.vat_19 + delivery_vat);
-            const total_net   = round2(gross_total - total_vat);
 
-            // Persist updated breakdown including delivery
-            localStorage.setItem('byteOrderVATDetails', JSON.stringify({
-                ...vatData, delivery_gross, delivery_net, delivery_vat,
-                total_vat, total_net, gross_total
-            }));
+            return { net_food, vat_7, net_bev, vat_19, items_gross,
+                     delivery_gross, delivery_net, delivery_vat, total_vat, gross_total };
+        }
 
-            // STEP 5: Build receipt in strict order — items → delivery → VAT → final total
-            let out = baseItems;                                          // All items + Items Total
-            if (delivery_gross > 0)
-                out += `\nDelivery Fee: €${delivery_gross.toFixed(2)}`;  // Delivery fee
-            out += `\n\n--- VAT Breakdown ---`;
-            if (vatData.net_food > 0)
-                out += `\nNet Food (7%): €${vatData.net_food.toFixed(2)} + VAT: €${vatData.vat_7.toFixed(2)}`;
-            if (vatData.net_beverage > 0)
-                out += `\nNet Drinks (19%): €${vatData.net_beverage.toFixed(2)} + VAT: €${vatData.vat_19.toFixed(2)}`;
-            if (delivery_gross > 0)
-                out += `\nNet Delivery (19%): €${delivery_net.toFixed(2)} + VAT: €${delivery_vat.toFixed(2)}`;
-            out += `\nTotal VAT: €${total_vat.toFixed(2)}`;
-            out += `\n\nFinal Total: €${gross_total.toFixed(2)}`;        // ONE final total only
+        function renderReceipt(totals) {
+            let out = orderCart.items.map(item => {
+                let line = `- ${item.name} (€${item.price.toFixed(2)})`;
+                if (item.note && item.note.trim()) line += ` [${item.note.trim()}]`;
+                return line;
+            }).join('\n');
 
-            itemsField.value = out;
+            out += `\n\nItems Total: €${totals.items_gross.toFixed(2)}`;
+            if (totals.delivery_gross > 0) out += `\n\nDelivery Fee: €${totals.delivery_gross.toFixed(2)}`;
+            out += `\n\n--- VAT Breakdown ---\n`;
+            if (totals.net_food > 0) out += `\nNet Food: €${totals.net_food.toFixed(2)}\nVAT (7% Food): €${totals.vat_7.toFixed(2)}`;
+            if (totals.net_bev  > 0) out += `\n\nNet Drinks: €${totals.net_bev.toFixed(2)}\nVAT (19% Drinks): €${totals.vat_19.toFixed(2)}`;
+            if (totals.delivery_gross > 0) out += `\n\nNet Delivery: €${totals.delivery_net.toFixed(2)}\nVAT (19% Delivery): €${totals.delivery_vat.toFixed(2)}`;
+            out += `\n\nTotal VAT: €${totals.total_vat.toFixed(2)}`;
+            out += `\n\nFinal Total: €${totals.gross_total.toFixed(2)}`;
+
+            document.getElementById('items-field').value = out;
+        }
+
+        function onCartUpdate() {
+            const totals = recalculateOrder();
+            renderReceipt(totals);
+            const totalEl = document.getElementById('final-total-display');
+            totalEl.textContent = `€${totals.gross_total.toFixed(2)}`;
+            totalEl.dataset.subtotal = totals.items_gross;
+        }
+
+        // ── DISTANCE / DELIVERY FEE ─────────────────────────────────────────
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R    = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a    = Math.sin(dLat/2)**2 +
+                         Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
         async function updateDeliveryFee() {
-            const address = document.getElementById('address-field').value;
+            const address  = document.getElementById('address-field').value;
             const statusEl = document.getElementById('delivery-status');
-            const totalEl = document.getElementById('final-total-display');
-            const itemsField = document.getElementById('items-field');
-            const subtotal = parseFloat(totalEl.dataset.subtotal) || 0;
-
             if (address.length < 10) return;
 
             statusEl.innerText = "Calculating distance... 🚚";
             statusEl.style.color = "var(--primary)";
 
             try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address + ", Solingen, Germany")}&format=json&limit=1`, {
-                    headers: { 'User-Agent': 'ByteBurgers-Order-System' }
-                });
-                const data = await response.json();
+                const res  = await fetch(
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address + ", Solingen, Germany")}&format=json&limit=1`,
+                    { headers: { 'User-Agent': 'ByteBurgers-Order-System' } }
+                );
+                const data = await res.json();
 
                 if (data.length > 0) {
-                    const lat = parseFloat(data[0].lat);
-                    const lon = parseFloat(data[0].lon);
+                    const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
                     const distance = calculateDistance(STORE_COORDS.lat, STORE_COORDS.lon, lat, lon);
-
                     const fee = distance < 5 ? 2.00 : 3.50;
-                    const total = subtotal + fee;
-
+                    orderCart.deliveryFee = fee;
+                    document.getElementById('items-field').dataset.distanceKm = distance.toFixed(2);
                     statusEl.innerText = `Distance: ${distance.toFixed(1)}km. Delivery Fee: €${fee.toFixed(2)} ✅`;
                     statusEl.style.color = "#44ff44";
-                    totalEl.innerText = `€${total.toFixed(2)}`;
-                    // Save distance and fee for upsell recalculation
-                    document.getElementById('items-field').dataset.distanceKm  = distance.toFixed(2);
-                    document.getElementById('items-field').dataset.deliveryFee  = fee.toFixed(2);
-
-                    // Update hidden field with delivery info
-                    processOrderVAT(fee, distance, true);
                 } else {
-                    statusEl.innerText = "Could not verify address distance. Defaulting to €3.50 fee.";
+                    orderCart.deliveryFee = 3.50;
+                    statusEl.innerText = "Could not verify address. Defaulting to €3.50 fee.";
                     statusEl.style.color = "#ffaa00";
-                    totalEl.innerText = `€${(subtotal + 3.50).toFixed(2)}`;
-                    
-                    // Update hidden field for email delivery summary
-                    processOrderVAT(3.50, 0, false);
                 }
-            } catch (error) {
-                console.error("Geocoding error:", error);
+            } catch {
+                orderCart.deliveryFee = 3.50;
                 statusEl.innerText = "Error calculating distance. Defaulting to €3.50 fee.";
-                totalEl.innerText = `€${(subtotal + 3.50).toFixed(2)}`;
-                
-                // Update hidden field for email delivery summary
-                processOrderVAT(3.50, 0, false);
             }
+            onCartUpdate();
         }
 
+        // ── INIT ────────────────────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const items = urlParams.get('items');
-            
-            if (items) {
-                document.getElementById('items-field').dataset.baseItems = items;
-                // Extract subtotal from the summary string
-                const totalMatch = items.match(/Items Total: €([\d.]+)/);
-                if (totalMatch) {
-                    const subtotal = parseFloat(totalMatch[1]);
-                    const totalDisplay = document.getElementById('final-total-display');
-                    totalDisplay.innerText = `€${subtotal.toFixed(2)}`;
-                    totalDisplay.dataset.subtotal = subtotal;
-                }
-                processOrderVAT(0, 0, false);
+            // Primary: load structured cart set by main.js doCheckout()
+            const storedCart = localStorage.getItem('byteOrderCart');
+            if (storedCart) {
+                try { orderCart.items = JSON.parse(storedCart); } catch {}
+            } else {
+                // Fallback: parse URL item lines (legacy / direct link)
+                const urlItems = new URLSearchParams(window.location.search).get('items') || '';
+                urlItems.split('\n').filter(l => l.startsWith('- ')).forEach(line => {
+                    const m = line.match(/^- (.+?) \(€([\d.]+)\)/);
+                    if (m) orderCart.items.push({ name: m[1], price: parseFloat(m[2]), foodGross: parseFloat(m[2]), beverageGross: 0 });
+                });
             }
+            onCartUpdate();
 
-            // Listen for address blur to calculate fee
             document.getElementById('address-field').addEventListener('blur', updateDeliveryFee);
-            
-            // Submit handler: if pickup already chosen submit direct, if delivery show cash modal
+
             const checkoutForm = document.getElementById('checkout-form');
             checkoutForm.addEventListener('submit', function(e) {
-                e.preventDefault(); // always block native submit
+                e.preventDefault();
                 if (checkoutForm.dataset.cashConfirmed) return;
                 const orderType = document.getElementById('order-type-field').value;
                 if (!orderType) {
@@ -287,34 +288,31 @@
             });
         });
 
-        // Inline fulfillment selector (replaces modal)
+        // ── FULFILLMENT ──────────────────────────────────────────────────────
         function chooseFulfillment(type) {
             const orderTypeField = document.getElementById('order-type-field');
             const addressSection = document.getElementById('address-section');
-            const addressField = document.getElementById('address-field');
-            const totalEl = document.getElementById('final-total-display');
-            const subtotal = parseFloat(totalEl.dataset.subtotal) || 0;
-            const btnPickup = document.getElementById('btn-pickup');
-            const btnDelivery = document.getElementById('btn-delivery');
+            const addressField   = document.getElementById('address-field');
+            const btnPickup      = document.getElementById('btn-pickup');
+            const btnDelivery    = document.getElementById('btn-delivery');
 
-            // Reset button styles
-            btnPickup.style.border = '2px solid rgba(255,255,255,0.15)';
+            btnPickup.style.border     = '2px solid rgba(255,255,255,0.15)';
             btnPickup.style.background = 'rgba(255,127,0,0.08)';
-            btnDelivery.style.border = '2px solid rgba(255,255,255,0.15)';
+            btnDelivery.style.border     = '2px solid rgba(255,255,255,0.15)';
             btnDelivery.style.background = 'rgba(255,127,0,0.08)';
 
             if (type === 'pickup') {
                 orderTypeField.value = 'pickup';
-                btnPickup.style.border = '2px solid var(--primary)';
+                btnPickup.style.border     = '2px solid var(--primary)';
                 btnPickup.style.background = 'rgba(255,127,0,0.2)';
                 addressSection.style.display = 'none';
                 addressField.value = 'PICKUP - Customer will collect at store';
-                processOrderVAT(0, 0, false);
-                totalEl.innerText = `€${subtotal.toFixed(2)}`;
+                orderCart.deliveryFee = 0;
+                onCartUpdate();
                 document.getElementById('delivery-status').innerText = '';
             } else {
                 orderTypeField.value = 'delivery';
-                btnDelivery.style.border = '2px solid var(--primary)';
+                btnDelivery.style.border     = '2px solid var(--primary)';
                 btnDelivery.style.background = 'rgba(255,127,0,0.2)';
                 addressSection.style.display = '';
                 addressField.value = '';
@@ -322,46 +320,40 @@
             }
         }
 
+        // ── SUBMIT ───────────────────────────────────────────────────────────
         async function submitFormViaAjax() {
-            const form = document.getElementById('checkout-form');
+            const form      = document.getElementById('checkout-form');
             const submitBtn = form.querySelector('.form-submit');
             submitBtn.disabled = true;
             submitBtn.textContent = 'Bestellung wird gesendet…';
 
-            // Generate unique order ID and save for tracking page
             const orderType = sessionStorage.getItem('byteOrderType');
-            const orderId = 'BYT' + Math.random().toString(36).substr(2, 5).toUpperCase();
+            const orderId   = 'BYT' + Math.random().toString(36).substr(2, 5).toUpperCase();
             sessionStorage.setItem('byteOrderId', orderId);
 
-            // Save full order data for ALL order types (admin needs to see everything)
+            const totals  = recalculateOrder();
+            const distKm  = parseFloat(document.getElementById('items-field')?.dataset.distanceKm) || 0;
+            const etaMins = distKm > 0 ? Math.round(10 + (distKm / 25) * 60) : 0;
+
             try {
-                const form2 = document.getElementById('checkout-form');
-                const distKm   = parseFloat(document.getElementById('items-field')?.dataset.distanceKm) || 0;
-                const etaMins  = distKm > 0 ? Math.round(10 + (distKm / 25) * 60) : 0;
                 await db.ref('orders/' + orderId).set({
-                    status: 'confirmed',
-                    created_at: Date.now(),
-                    type: orderType,
-                    name: form2.querySelector('[name="name"]')?.value || '',
-                    phone: form2.querySelector('[name="phone"]')?.value || '',
+                    status: 'confirmed', created_at: Date.now(), type: orderType,
+                    name:    form.querySelector('[name="name"]')?.value || '',
+                    phone:   form.querySelector('[name="phone"]')?.value || '',
                     address: document.getElementById('address-field')?.value || '',
-                    items: document.getElementById('items-field')?.value || '',
+                    items:   document.getElementById('items-field')?.value || '',
                     payment: document.getElementById('payment-field')?.value || '',
-                    notes: form2.querySelector('[name="notes"]')?.value || '',
-                    total: parseFloat(document.getElementById('final-total-display')?.textContent?.replace('€','')) || 0,
-                    distance_km: distKm,
-                    eta_minutes: etaMins
+                    notes:   form.querySelector('[name="notes"]')?.value || '',
+                    total:   totals.gross_total,
+                    distance_km: distKm, eta_minutes: etaMins
                 });
             } catch(e) {}
 
             const formData = new FormData(form);
             formData.append('Order_ID', '#' + orderId);
-
             fetch('https://formsubmit.co/' + CONFIG.formsubmitEmail, {
-                method: 'POST',
-                body: formData,
-                headers: { 'Accept': 'application/json' },
-                keepalive: true
+                method: 'POST', body: formData,
+                headers: { 'Accept': 'application/json' }, keepalive: true
             }).catch(() => {});
 
             window.location.href = 'thanks.html?oid=' + orderId + '&type=' + (orderType||'').toLowerCase() + '&v=' + Date.now();
@@ -373,22 +365,19 @@
             document.getElementById('cash-modal').classList.remove('active');
         }
 
-        function setCashAmount(val) {
-            processCashPayment(val);
-        }
+        function setCashAmount(val) { processCashPayment(val); }
 
         function submitCustomCash() {
             const val = document.getElementById('custom-cash-input').value;
-            if(!val || val <= 0) return alert('Please enter a valid cash amount.');
+            if (!val || val <= 0) return alert('Please enter a valid cash amount.');
             processCashPayment(parseFloat(val));
         }
 
         function processCashPayment(inputVal) {
-            const form = document.getElementById('checkout-form');
+            const form        = document.getElementById('checkout-form');
             const hiddenField = document.getElementById('payment-field');
-            const orderType = document.getElementById('order-type-field').value;
-            
-            // If delivery, ensure address is filled
+            const orderType   = document.getElementById('order-type-field').value;
+
             if (orderType === 'DELIVERY') {
                 const addr = document.getElementById('address-field').value.trim();
                 if (addr.length < 5) {
@@ -398,20 +387,13 @@
                     return;
                 }
             }
-            
+
             if (inputVal === 'Exact Change') {
                 hiddenField.value = "CASH: Exact Change provided.";
             } else {
-                let storedVat = localStorage.getItem('byteOrderVATDetails');
-                let finalTotal = 0;
-                if(storedVat) {
-                    finalTotal = JSON.parse(storedVat).gross_total || 0;
-                }
-                
-                let change = parseFloat(inputVal) - parseFloat(finalTotal);
-                if (change < 0) {
-                    return alert(`That is not enough to cover the €${finalTotal.toFixed(2)} bill!`);
-                }
+                const { gross_total } = recalculateOrder();
+                const change = parseFloat(inputVal) - gross_total;
+                if (change < 0) return alert(`That is not enough to cover the €${gross_total.toFixed(2)} bill!`);
                 hiddenField.value = `CASH: Paying with €${parseFloat(inputVal).toFixed(2)} (Driver must bring €${change.toFixed(2)} change)`;
             }
 
@@ -421,18 +403,17 @@
             showUpsell();
         }
 
-        // ── MIN ORDER CHECK ──────────────────────────────────────────────────
-        let minOrderAmount = 10; // default, overridden by Firebase
+        // ── MIN ORDER ────────────────────────────────────────────────────────
+        let minOrderAmount = 10;
         firebase.database().ref('settings/minOrder').once('value', snap => {
             if (snap.val()) minOrderAmount = parseFloat(snap.val());
         });
 
         function checkMinOrder() {
-            const orderType = document.getElementById('order-type-field').value;
-            if (orderType !== 'delivery') return true; // pickup has no minimum
-            const total = parseFloat(document.getElementById('final-total-display')?.textContent?.replace('€','')) || 0;
-            if (total < minOrderAmount) {
-                const needed = (minOrderAmount - total).toFixed(2);
+            if (document.getElementById('order-type-field').value !== 'delivery') return true;
+            const { gross_total } = recalculateOrder();
+            if (gross_total < minOrderAmount) {
+                const needed = (minOrderAmount - gross_total).toFixed(2);
                 alert(`Mindestbestellwert für Lieferung ist €${minOrderAmount.toFixed(2)}.\nNoch €${needed} fehlen. Bitte füge weitere Artikel hinzu.`);
                 return false;
             }
@@ -440,16 +421,15 @@
         }
 
         // ── UPSELL ───────────────────────────────────────────────────────────
-        // All upsell candidates — picked smartly based on what's in the cart
         const ALL_BURGERS = ['goat byte','byte classic','double byte','smoky bbq','crispy chicken','spicy chicken','green byte','falafel byte','truffle','spicy goat'];
         const ALL_SIDES   = ['fries','onion ring','mozzarella','jalapeño','tender','currywurst'];
         const ALL_DRINKS  = ['soda','shake','water','cola','fanta','sprite','drink'];
 
         const UPSELL_POOL = {
             burger: [
-                { name:'Byte Classic',       price:6.41, emoji:'🍔', desc:'Our most popular smash burger' },
-                { name:'Crispy Chicken Byte',price:5.87, emoji:'🐔', desc:'Crispy chicken, coleslaw, pickles' },
-                { name:'Green Byte (Vegan)', price:5.87, emoji:'🥑', desc:'Plant-based, avocado, roasted peppers' },
+                { name:'Byte Classic',        price:6.41, emoji:'🍔', desc:'Our most popular smash burger' },
+                { name:'Crispy Chicken Byte', price:5.87, emoji:'🐔', desc:'Crispy chicken, coleslaw, pickles' },
+                { name:'Green Byte (Vegan)',  price:5.87, emoji:'🥑', desc:'Plant-based, avocado, roasted peppers' },
             ],
             side: [
                 { name:'Classic Fries',      price:2.66, emoji:'🍟', desc:'Crispy thin-cut fries' },
@@ -457,45 +437,32 @@
                 { name:'Crispy Onion Rings', price:4.80, emoji:'🧅', desc:'Beer-battered, 6 pcs' },
             ],
             drink: [
-                { name:'Sodas',              price:2.68, emoji:'🥤', desc:'Coca-Cola / Fanta / Sprite' },
-                { name:'Chocolate Shake',    price:3.73, emoji:'🍫', desc:'Rich Belgian chocolate' },
-                { name:'Vanilla Shake',      price:3.73, emoji:'🍦', desc:'Madagascar vanilla' },
-                { name:'Strawberry Shake',   price:3.73, emoji:'🍓', desc:'Fresh farm strawberries' },
+                { name:'Sodas',           price:2.68, emoji:'🥤', desc:'Coca-Cola / Fanta / Sprite' },
+                { name:'Chocolate Shake', price:3.73, emoji:'🍫', desc:'Rich Belgian chocolate' },
+                { name:'Vanilla Shake',   price:3.73, emoji:'🍦', desc:'Madagascar vanilla' },
+                { name:'Strawberry Shake',price:3.73, emoji:'🍓', desc:'Fresh farm strawberries' },
             ],
         };
 
         function showUpsell() {
-            const itemsText = (document.getElementById('items-field')?.value || '').toLowerCase();
-            const hasBurger = ALL_BURGERS.some(k => itemsText.includes(k));
-            const hasSide   = ALL_SIDES.some(k => itemsText.includes(k));
-            const hasDrink  = ALL_DRINKS.some(k => itemsText.includes(k));
+            const cartNames = orderCart.items.map(i => i.name.toLowerCase()).join(' ');
+            const hasBurger = ALL_BURGERS.some(k => cartNames.includes(k));
+            const hasSide   = ALL_SIDES.some(k => cartNames.includes(k));
+            const hasDrink  = ALL_DRINKS.some(k => cartNames.includes(k));
 
             const offers = [];
+            if (!hasBurger) offers.push(UPSELL_POOL.burger[Math.floor(Math.random() * UPSELL_POOL.burger.length)]);
+            if (!hasSide)   offers.push(UPSELL_POOL.side[Math.floor(Math.random() * UPSELL_POOL.side.length)]);
+            if (!hasDrink)  offers.push(UPSELL_POOL.drink[Math.floor(Math.random() * UPSELL_POOL.drink.length)]);
 
-            if (!hasBurger) {
-                // Pick a random burger suggestion
-                const pool = UPSELL_POOL.burger;
-                offers.push(pool[Math.floor(Math.random() * pool.length)]);
-            }
-            if (!hasSide) {
-                const pool = UPSELL_POOL.side;
-                offers.push(pool[Math.floor(Math.random() * pool.length)]);
-            }
-            if (!hasDrink) {
-                const pool = UPSELL_POOL.drink;
-                offers.push(pool[Math.floor(Math.random() * pool.length)]);
-            }
-
-            // Max 2 suggestions so it doesn't feel overwhelming
             const shown = offers.slice(0, 2);
             if (!shown.length) { submitFormViaAjax(); return; }
 
-            // Personalise the headline
             let headline = 'Make it a meal? 🍔';
-            if (!hasBurger && hasSide) headline = 'Missing a burger? 🍔';
+            if (!hasBurger && hasSide)            headline = 'Missing a burger? 🍔';
             else if (hasBurger && !hasSide && !hasDrink) headline = 'Add sides & a drink? 🍟';
-            else if (hasBurger && !hasDrink) headline = 'Add a drink? 🥤';
-            else if (hasBurger && !hasSide) headline = 'Add some sides? 🍟';
+            else if (hasBurger && !hasDrink)      headline = 'Add a drink? 🥤';
+            else if (hasBurger && !hasSide)       headline = 'Add some sides? 🍟';
 
             document.getElementById('upsell-headline').textContent = headline;
             document.getElementById('upsell-offers').innerHTML = shown.map(u => `
@@ -520,47 +487,15 @@
         }
 
         function addUpsellItem(name, price, emoji) {
-            const itemsField = document.getElementById('items-field');
-            const totalEl    = document.getElementById('final-total-display');
-            const round2     = v => Math.round(v * 100) / 100;
-
-            // Append item to base items so processOrderVAT sees it
-            const itemLine = `\n- ${emoji} ${name} (€${price.toFixed(2)})`;
-            if (itemsField.dataset.baseItems !== undefined)
-                itemsField.dataset.baseItems += itemLine;
-
-            // Update VAT breakdown in localStorage to include this upsell item
-            const BEVERAGES = ['coca-cola','fanta','sprite','water','wasser','shake','soda','drink','cola','juice','lemon','beer','bier','kaffee','coffee','tea','tee'];
-            const isBev = BEVERAGES.some(k => name.toLowerCase().includes(k));
-            const stored = localStorage.getItem('byteOrderVATDetails');
-            if (stored) {
-                const v = JSON.parse(stored);
-                if (isBev) {
-                    const net = round2(price / 1.19);
-                    const vat = round2(price - net);
-                    v.net_beverage = round2((v.net_beverage || 0) + net);
-                    v.vat_19       = round2((v.vat_19 || 0) + vat);
-                } else {
-                    const net = round2(price / 1.07);
-                    const vat = round2(price - net);
-                    v.net_food = round2((v.net_food || 0) + net);
-                    v.vat_7    = round2((v.vat_7 || 0) + vat);
-                }
-                v.items_gross = round2((v.items_gross || 0) + price);
-                localStorage.setItem('byteOrderVATDetails', JSON.stringify(v));
-            }
-
-            // Update displayed total and reprocess VAT output
-            const current = parseFloat(totalEl.dataset.subtotal || totalEl.textContent.replace('€','')) || 0;
-            const newSubtotal = round2(current + price);
-            totalEl.dataset.subtotal = newSubtotal;
-            totalEl.textContent = `€${newSubtotal.toFixed(2)}`;
-
-            // Reprocess VAT with current delivery fee
-            const deliveryFee = parseFloat(itemsField.dataset.deliveryFee || 0);
-            processOrderVAT(deliveryFee, 0, false);
-
-            // Remove that row from the modal
+            // Push to cart — VAT is recalculated from scratch by onCartUpdate()
+            const isBev = BEVERAGES_KW.some(k => name.toLowerCase().includes(k));
+            orderCart.items.push({
+                name: `${emoji} ${name}`,
+                price,
+                foodGross:     isBev ? 0 : price,
+                beverageGross: isBev ? price : 0
+            });
+            onCartUpdate();
             event.target.closest('div[style]').remove();
             if (!document.getElementById('upsell-offers').children.length) closeUpsell();
         }

@@ -552,15 +552,8 @@ function doCheckout() {
         else                             total_vat_19 = round2(total_vat_19 - drift);
     }
 
-    // STEP 5: Store VAT breakdown for order.html — delivery fee added there
-    const internalVatBreakdown = {
-        net_food:     round2(total_net_food),
-        vat_7:        round2(total_vat_7),
-        net_beverage: round2(total_net_bev),
-        vat_19:       round2(total_vat_19),
-        items_gross:  items_gross
-    };
-    localStorage.setItem('byteOrderVATDetails', JSON.stringify(internalVatBreakdown));
+    // STEP 5: Store full cart snapshot for order.html (single source of truth)
+    localStorage.setItem('byteOrderCart', JSON.stringify(orderItems));
 
     // STEP 6: Build base order string — items only, no VAT yet (order.html adds that)
     const finalOrder = `${itemsSummary}\n\nItems Total: €${items_gross.toFixed(2)}`;
