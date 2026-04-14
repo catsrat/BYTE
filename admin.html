@@ -824,7 +824,38 @@ function closeOrderModal() { document.getElementById('order-modal').classList.ad
 function printOrder(id) {
     const o = allOrders[id];
     const time = new Date(o.created_at).toLocaleString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    const items = (o.items || '').replace(/\n/g, '<br/>');
+    const raw = (o.items || '');
+
+    // Parse receipt into sections — items block, VAT block
+    const vatSplit = raw.split('--- VAT Breakdown ---');
+    const itemsBlock = vatSplit[0].trim();
+    const vatBlock   = vatSplit[1] ? vatSplit[1].trim() : '';
+
+    // Render items block: each line as a row
+    const itemLines = itemsBlock.split('\n').map(line => {
+        line = line.trim();
+        if (!line) return '';
+        // price lines like "Items Total: €x" or "Delivery Fee: €x"
+        const colonMatch = line.match(/^(.+?):\s*(€[\d.]+)$/);
+        if (colonMatch) return `<div class="row" style="margin-top:4px"><b>${colonMatch[1]}</b><b>${colonMatch[2]}</b></div>`;
+        // item lines like "- Name (€x) [note]"
+        const itemMatch = line.match(/^-\s*(.+?)\s*\((€[\d.]+)\)(.*)$/);
+        if (itemMatch) {
+            const note = itemMatch[3].replace(/[\[\]]/g,'').trim();
+            return `<div class="row"><span>${itemMatch[1]}${note ? `<br/><small style="color:#666">${note}</small>` : ''}</span><span>${itemMatch[2]}</span></div>`;
+        }
+        return `<div style="font-size:11px">${line}</div>`;
+    }).join('');
+
+    // Render VAT block
+    const vatLines = vatBlock ? vatBlock.split('\n').map(line => {
+        line = line.trim();
+        if (!line) return '';
+        const finalMatch = line.match(/^Final Total:\s*(€[\d.]+)$/);
+        if (finalMatch) return `<div class="divider"></div><div class="row total-row"><span>FINAL TOTAL</span><span>${finalMatch[1]}</span></div>`;
+        return `<div style="font-size:11px;color:#444">${line}</div>`;
+    }).join('') : `<div class="divider"></div><div class="row total-row"><span>TOTAL</span><span>€${(o.total||0).toFixed(2)}</span></div>`;
+
     const w = window.open('', '_blank', 'width=420,height=680');
     w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/>
 <title>Receipt #${id}</title>
@@ -835,13 +866,12 @@ body { font-family:'Courier New',Courier,monospace; font-size:13px; width:80mm; 
 .logo { font-size:22px; font-weight:bold; letter-spacing:2px; }
 .divider { border-top:1px dashed #000; margin:6px 0; }
 .row { display:flex; justify-content:space-between; margin:2px 0; }
-.items { margin:6px 0; line-height:1.7; font-size:12px; }
-.total-row { font-weight:bold; font-size:14px; }
+.total-row { font-weight:bold; font-size:14px; margin-top:4px; }
 .footer { text-align:center; font-size:11px; margin-top:8px; }
 @media print { @page { margin:0; size:80mm auto; } }
 </style></head><body>
 <div class="center logo">🍔 BYTE BURGERS</div>
-<div class="center" style="font-size:11px;margin-top:2px;">byteburgers.shop | Tel: 0212315737</div>
+<div class="center" style="font-size:11px;margin-top:2px;">${CONFIG.website} | Tel: ${CONFIG.phone}</div>
 <div class="divider"></div>
 <div class="row"><span>Order</span><span><b>#${id}</b></span></div>
 <div class="row"><span>Date</span><span>${time}</span></div>
@@ -849,10 +879,9 @@ body { font-family:'Courier New',Courier,monospace; font-size:13px; width:80mm; 
 <div class="row"><span>Customer</span><span>${o.name||'—'}</span></div>
 ${o.address && o.address !== 'PICKUP - Customer will collect at store' ? `<div class="row"><span>Address</span><span style="text-align:right;max-width:55mm">${o.address}</span></div>` : ''}
 <div class="divider"></div>
-<div class="items">${items}</div>
-<div class="divider"></div>
-<div class="row total-row"><span>TOTAL</span><span>€${(o.total||0).toFixed(2)}</span></div>
-<div class="row" style="font-size:11px;color:#444"><span>Payment</span><span>${o.payment||'—'}</span></div>
+${itemLines}
+${vatLines}
+<div class="row" style="font-size:11px;color:#444;margin-top:4px"><span>Payment</span><span>${o.payment||'—'}</span></div>
 ${o.notes ? `<div class="row" style="font-size:11px"><span>Notes</span><span>${o.notes}</span></div>` : ''}
 <div class="divider"></div>
 <div class="footer">Vielen Dank für Ihren Einkauf!<br/>Thank you &amp; enjoy your meal!</div>

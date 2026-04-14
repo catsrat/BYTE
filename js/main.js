@@ -503,17 +503,25 @@ function checkout() {
 function doCheckout() {
     if (cart.length === 0) return;
 
-    const itemsSummary = cart.map(item => `- ${item.name} (€${item.price.toFixed(2)})`).join('\n');
-    const total = cart.reduce((sum, item) => sum + item.price, 0);
-    let finalOrder = `${itemsSummary}\n\nItems Total: €${total.toFixed(2)}`;
-    
-    // ── VAT Calculation — Germany compliant, per-item rounding ──────────────
-    const round2 = v => Math.round(v * 100) / 100;
+    // STEP 1: Snapshot all items — lock cart before any calculation
+    const orderItems = [...cart];
 
+    // STEP 2: Build items list (with per-item notes)
+    const itemsSummary = orderItems.map(item => {
+        let line = `- ${item.name} (€${item.price.toFixed(2)})`;
+        if (item.note && item.note.trim()) line += ` [${item.note.trim()}]`;
+        return line;
+    }).join('\n');
+
+    // STEP 3: Items total (before delivery)
+    const round2 = v => Math.round(v * 100) / 100;
+    const items_gross = round2(orderItems.reduce((s, i) => s + i.price, 0));
+
+    // STEP 4: VAT calculation on all items — Germany compliant, per-item rounding
     let total_net_food = 0, total_vat_7 = 0;
     let total_net_bev  = 0, total_vat_19 = 0;
 
-    cart.forEach(item => {
+    orderItems.forEach(item => {
         const fg = item.foodGross     !== undefined ? item.foodGross     : (isBeverage(item.name) ? 0 : item.price);
         const bg = item.beverageGross !== undefined ? item.beverageGross : (isBeverage(item.name) ? item.price : 0);
 
@@ -536,30 +544,27 @@ function doCheckout() {
     total_net_bev  = round2(total_net_bev);
     total_vat_19   = round2(total_vat_19);
 
-    const total_net = round2(total_net_food + total_net_bev);
-    const total_vat = round2(total_vat_7 + total_vat_19);
-    const final_total = round2(total_net + total_vat);
-
     // Edge-case safety: adjust largest VAT line if ±0.01 drift
-    const sum_gross = round2(cart.reduce((s, i) => s + i.price, 0));
-    const diff = round2(final_total - sum_gross);
-    if (diff !== 0) {
-        if (total_vat_7 >= total_vat_19) total_vat_7 = round2(total_vat_7 - diff);
-        else                             total_vat_19 = round2(total_vat_19 - diff);
+    const vat_sum_check = round2(total_net_food + total_vat_7 + total_net_bev + total_vat_19);
+    const drift = round2(vat_sum_check - items_gross);
+    if (drift !== 0) {
+        if (total_vat_7 >= total_vat_19) total_vat_7 = round2(total_vat_7 - drift);
+        else                             total_vat_19 = round2(total_vat_19 - drift);
     }
 
+    // STEP 5: Store VAT breakdown for order.html — delivery fee added there
     const internalVatBreakdown = {
-        net_food:          round2(total_net_food),
-        vat_7:             round2(total_vat_7),
-        net_beverage:      round2(total_net_bev),
-        vat_19:            round2(total_vat_19),
-        total_net:         round2(total_net_food + total_net_bev),
-        total_vat:         round2(total_vat_7 + total_vat_19),
-        gross_total:       sum_gross
+        net_food:     round2(total_net_food),
+        vat_7:        round2(total_vat_7),
+        net_beverage: round2(total_net_bev),
+        vat_19:       round2(total_vat_19),
+        items_gross:  items_gross
     };
     localStorage.setItem('byteOrderVATDetails', JSON.stringify(internalVatBreakdown));
-    
-    // Redirect to order page with full summary
+
+    // STEP 6: Build base order string — items only, no VAT yet (order.html adds that)
+    const finalOrder = `${itemsSummary}\n\nItems Total: €${items_gross.toFixed(2)}`;
+
     window.location.href = `order.html?items=${encodeURIComponent(finalOrder)}`;
 }
 

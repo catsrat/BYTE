@@ -145,56 +145,50 @@
 
         function processOrderVAT(fee, distance, isConfirmed) {
             const itemsField = document.getElementById('items-field');
-            if(!itemsField.dataset.baseItems) return;
-            
-            let finalOutput = itemsField.dataset.baseItems.split('\n\n--- VAT Breakdown ---')[0];
-            
-            let storedVat = localStorage.getItem('byteOrderVATDetails');
-            if (storedVat) {
-                let vatData = JSON.parse(storedVat);
-                const round2 = v => Math.round(v * 100) / 100;
+            if (!itemsField.dataset.baseItems) return;
+            const round2 = v => Math.round(v * 100) / 100;
 
-                // Delivery VAT (19%)
-                const delivery_gross = fee;
-                const delivery_net   = round2(fee / 1.19);
-                const delivery_vat   = round2(fee - delivery_net);
+            // STEP 1: Base items block — strip any previous VAT section
+            const baseItems = itemsField.dataset.baseItems.split('\n\n--- VAT Breakdown ---')[0]
+                                                           .split('\n\nDelivery Fee:')[0];
 
-                const total_vat   = round2(vatData.vat_7 + vatData.vat_19 + delivery_vat);
-                const total_net   = round2(vatData.net_food + vatData.net_beverage + delivery_net);
-                const items_gross = round2(vatData.net_food + vatData.vat_7 + vatData.net_beverage + vatData.vat_19);
-                const gross_total = round2(items_gross + delivery_gross);
+            // STEP 2: Load VAT data calculated from full item list
+            const storedVat = localStorage.getItem('byteOrderVATDetails');
+            if (!storedVat) { itemsField.value = baseItems; return; }
+            const vatData = JSON.parse(storedVat);
 
-                localStorage.setItem('byteOrderVATDetails', JSON.stringify({
-                    ...vatData,
-                    delivery_gross, delivery_net, delivery_vat,
-                    total_vat, total_net, gross_total
-                }));
+            // STEP 3: Delivery fee VAT (19%)
+            const delivery_gross = round2(fee);
+            const delivery_net   = round2(fee / 1.19);
+            const delivery_vat   = round2(delivery_gross - delivery_net);
 
-                if (fee > 0) {
-                    finalOutput += `\n\nDelivery Fee: €${fee.toFixed(2)}`;
-                }
+            // STEP 4: Full order totals
+            const items_gross = round2(vatData.items_gross || (vatData.net_food + vatData.vat_7 + vatData.net_beverage + vatData.vat_19));
+            const gross_total = round2(items_gross + delivery_gross);
+            const total_vat   = round2(vatData.vat_7 + vatData.vat_19 + delivery_vat);
+            const total_net   = round2(gross_total - total_vat);
 
-                finalOutput += `\n\n--- VAT Breakdown ---\n\n`;
+            // Persist updated breakdown including delivery
+            localStorage.setItem('byteOrderVATDetails', JSON.stringify({
+                ...vatData, delivery_gross, delivery_net, delivery_vat,
+                total_vat, total_net, gross_total
+            }));
 
-                if (vatData.net_food > 0) {
-                    finalOutput += `Net Food: €${vatData.net_food.toFixed(2)}\n`;
-                    finalOutput += `VAT (7% Food): €${vatData.vat_7.toFixed(2)}\n\n`;
-                }
+            // STEP 5: Build receipt in strict order — items → delivery → VAT → final total
+            let out = baseItems;                                          // All items + Items Total
+            if (delivery_gross > 0)
+                out += `\nDelivery Fee: €${delivery_gross.toFixed(2)}`;  // Delivery fee
+            out += `\n\n--- VAT Breakdown ---`;
+            if (vatData.net_food > 0)
+                out += `\nNet Food (7%): €${vatData.net_food.toFixed(2)} + VAT: €${vatData.vat_7.toFixed(2)}`;
+            if (vatData.net_beverage > 0)
+                out += `\nNet Drinks (19%): €${vatData.net_beverage.toFixed(2)} + VAT: €${vatData.vat_19.toFixed(2)}`;
+            if (delivery_gross > 0)
+                out += `\nNet Delivery (19%): €${delivery_net.toFixed(2)} + VAT: €${delivery_vat.toFixed(2)}`;
+            out += `\nTotal VAT: €${total_vat.toFixed(2)}`;
+            out += `\n\nFinal Total: €${gross_total.toFixed(2)}`;        // ONE final total only
 
-                if (vatData.net_beverage > 0) {
-                    finalOutput += `Net Drinks: €${vatData.net_beverage.toFixed(2)}\n`;
-                    finalOutput += `VAT (19% Drinks): €${vatData.vat_19.toFixed(2)}\n\n`;
-                }
-
-                if (fee > 0) {
-                    finalOutput += `Net Delivery: €${delivery_net.toFixed(2)}\n`;
-                    finalOutput += `VAT (19% Delivery): €${delivery_vat.toFixed(2)}\n\n`;
-                }
-
-                finalOutput += `Total VAT: €${total_vat.toFixed(2)}\n\n`;
-                finalOutput += `Final Total: €${gross_total.toFixed(2)}`;
-            }
-            itemsField.value = finalOutput;
+            itemsField.value = out;
         }
 
         async function updateDeliveryFee() {
@@ -226,8 +220,9 @@
                     statusEl.innerText = `Distance: ${distance.toFixed(1)}km. Delivery Fee: €${fee.toFixed(2)} ✅`;
                     statusEl.style.color = "#44ff44";
                     totalEl.innerText = `€${total.toFixed(2)}`;
-                    // Save distance so thanks.html can show ETA without re-geocoding
-                    document.getElementById('items-field').dataset.distanceKm = distance.toFixed(2);
+                    // Save distance and fee for upsell recalculation
+                    document.getElementById('items-field').dataset.distanceKm  = distance.toFixed(2);
+                    document.getElementById('items-field').dataset.deliveryFee  = fee.toFixed(2);
 
                     // Update hidden field with delivery info
                     processOrderVAT(fee, distance, true);
@@ -527,17 +522,46 @@
         function addUpsellItem(name, price, emoji) {
             const itemsField = document.getElementById('items-field');
             const totalEl    = document.getElementById('final-total-display');
-            // Append item to order text
-            itemsField.value += `\n${emoji} ${name} x1 — €${price.toFixed(2)}`;
+            const round2     = v => Math.round(v * 100) / 100;
+
+            // Append item to base items so processOrderVAT sees it
+            const itemLine = `\n- ${emoji} ${name} (€${price.toFixed(2)})`;
             if (itemsField.dataset.baseItems !== undefined)
-                itemsField.dataset.baseItems += `\n${emoji} ${name} x1 — €${price.toFixed(2)}`;
-            // Update total
-            const current = parseFloat(totalEl.textContent.replace('€','')) || 0;
-            totalEl.textContent = `€${(current + price).toFixed(2)}`;
+                itemsField.dataset.baseItems += itemLine;
+
+            // Update VAT breakdown in localStorage to include this upsell item
+            const BEVERAGES = ['coca-cola','fanta','sprite','water','wasser','shake','soda','drink','cola','juice','lemon','beer','bier','kaffee','coffee','tea','tee'];
+            const isBev = BEVERAGES.some(k => name.toLowerCase().includes(k));
+            const stored = localStorage.getItem('byteOrderVATDetails');
+            if (stored) {
+                const v = JSON.parse(stored);
+                if (isBev) {
+                    const net = round2(price / 1.19);
+                    const vat = round2(price - net);
+                    v.net_beverage = round2((v.net_beverage || 0) + net);
+                    v.vat_19       = round2((v.vat_19 || 0) + vat);
+                } else {
+                    const net = round2(price / 1.07);
+                    const vat = round2(price - net);
+                    v.net_food = round2((v.net_food || 0) + net);
+                    v.vat_7    = round2((v.vat_7 || 0) + vat);
+                }
+                v.items_gross = round2((v.items_gross || 0) + price);
+                localStorage.setItem('byteOrderVATDetails', JSON.stringify(v));
+            }
+
+            // Update displayed total and reprocess VAT output
+            const current = parseFloat(totalEl.dataset.subtotal || totalEl.textContent.replace('€','')) || 0;
+            const newSubtotal = round2(current + price);
+            totalEl.dataset.subtotal = newSubtotal;
+            totalEl.textContent = `€${newSubtotal.toFixed(2)}`;
+
+            // Reprocess VAT with current delivery fee
+            const deliveryFee = parseFloat(itemsField.dataset.deliveryFee || 0);
+            processOrderVAT(deliveryFee, 0, false);
+
             // Remove that row from the modal
-            const btn = event.target;
-            btn.closest('div[style]').remove();
-            // If no more offers, close and submit
+            event.target.closest('div[style]').remove();
             if (!document.getElementById('upsell-offers').children.length) closeUpsell();
         }
 
