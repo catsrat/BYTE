@@ -218,11 +218,25 @@
         <!-- Video Showcase directly below Hero -->
         <section class="video-showcase">
             <div class="container" style="max-width: 1000px; position: relative;">
-                <video id="promo-video" autoplay="" loop="" muted="" playsinline="" preload="auto"
+                <video id="promo-video" autoplay loop muted playsinline webkit-playsinline preload="auto"
                     style="width: 100%; border-radius: 20px; display: block; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
                     <source src="assets/promo.mp4" type="video/mp4" />
                     Ihr Browser unterstützt das Video-Tag nicht.
                 </video>
+                <script>
+                (function(){
+                    var v = document.getElementById('promo-video');
+                    if (!v) return;
+                    v.muted = true;
+                    v.load();
+                    v.play().catch(function(){});
+                    // fallback: play on first touch if autoplay was blocked
+                    document.addEventListener('touchstart', function h(){
+                        v.play().catch(function(){});
+                        document.removeEventListener('touchstart', h);
+                    }, { once: true, passive: true });
+                })();
+                </script>
                 <img alt="Halal Certified" src="images/halal-badge.png"
                     style="position: absolute; bottom: 20px; right: 35px; width: 40px; height: auto; pointer-events: none; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));" />
             </div>
