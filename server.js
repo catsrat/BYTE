@@ -281,6 +281,124 @@ app.post('/api/sign-order', async (req, res) => {
     }
 });
 
+// ── SumUp config ─────────────────────────────────────────────────────────────
+const SUMUP_CLIENT_ID     = process.env.SUMUP_CLIENT_ID;
+const SUMUP_CLIENT_SECRET = process.env.SUMUP_CLIENT_SECRET;
+const SUMUP_MERCHANT_CODE = process.env.SUMUP_MERCHANT_CODE;
+
+function sumupReq(method, path, body, token) {
+    return new Promise((resolve, reject) => {
+        const data = body ? JSON.stringify(body) : null;
+        const opts = {
+            hostname: 'api.sumup.com',
+            port: 443,
+            path,
+            method,
+            headers: {
+                'Content-Type':  'application/json',
+                'Authorization': 'Bearer ' + token,
+                ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
+            }
+        };
+        const req = https.request(opts, res => {
+            let raw = '';
+            res.on('data', c => raw += c);
+            res.on('end', () => {
+                try { resolve({ status: res.statusCode, body: JSON.parse(raw || '{}') }); }
+                catch { resolve({ status: res.statusCode, body: {} }); }
+            });
+        });
+        req.on('error', reject);
+        if (data) req.write(data);
+        req.end();
+    });
+}
+
+async function getSumUpToken() {
+    return new Promise((resolve, reject) => {
+        const body = `grant_type=client_credentials&client_id=${encodeURIComponent(SUMUP_CLIENT_ID)}&client_secret=${encodeURIComponent(SUMUP_CLIENT_SECRET)}&scope=payments`;
+        const opts = {
+            hostname: 'api.sumup.com',
+            port: 443,
+            path: '/token',
+            method: 'POST',
+            headers: {
+                'Content-Type':   'application/x-www-form-urlencoded',
+                'Content-Length': Buffer.byteLength(body)
+            }
+        };
+        const req = https.request(opts, res => {
+            let raw = '';
+            res.on('data', c => raw += c);
+            res.on('end', () => {
+                try {
+                    const r = JSON.parse(raw);
+                    if (r.access_token) resolve(r.access_token);
+                    else reject(new Error('SumUp auth failed: ' + raw));
+                } catch(e) { reject(e); }
+            });
+        });
+        req.on('error', reject);
+        req.write(body);
+        req.end();
+    });
+}
+
+// ── API: Create SumUp online payment ─────────────────────────────────────────
+app.post('/api/create-payment', async (req, res) => {
+    const { order_id, amount, description, return_url } = req.body;
+
+    if (!SUMUP_CLIENT_ID || !SUMUP_MERCHANT_CODE) {
+        return res.json({ ok: false, reason: 'SumUp not configured' });
+    }
+
+    try {
+        const token = await getSumUpToken();
+        const r = await sumupReq('POST', '/v0.1/checkouts', {
+            checkout_reference: order_id,
+            amount:             parseFloat(Number(amount).toFixed(2)),
+            currency:           'EUR',
+            merchant_code:      SUMUP_MERCHANT_CODE,
+            description:        description || 'BYTE Burgers Order ' + order_id,
+            redirect_url:       return_url  || 'https://byteburgers.shop/thanks.html'
+        }, token);
+
+        if (r.status !== 200 && r.status !== 201) {
+            throw new Error('SumUp checkout failed: ' + JSON.stringify(r.body));
+        }
+
+        return res.json({
+            ok:          true,
+            checkout_id: r.body.id,
+            payment_url: 'https://pay.sumup.com/b2c/' + r.body.id
+        });
+    } catch (err) {
+        console.error('SumUp create payment error:', err.message);
+        return res.json({ ok: false, reason: err.message });
+    }
+});
+
+// ── API: Verify SumUp payment ─────────────────────────────────────────────────
+app.get('/api/verify-payment/:checkoutId', async (req, res) => {
+    const { checkoutId } = req.params;
+
+    try {
+        const token = await getSumUpToken();
+        const r = await sumupReq('GET', `/v0.1/checkouts/${checkoutId}`, null, token);
+
+        return res.json({
+            ok:       true,
+            paid:     r.body.status === 'PAID',
+            status:   r.body.status,
+            amount:   r.body.amount,
+            currency: r.body.currency
+        });
+    } catch (err) {
+        console.error('SumUp verify payment error:', err.message);
+        return res.json({ ok: false, reason: err.message });
+    }
+});
+
 // ── API: Health check ─────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
     res.json({

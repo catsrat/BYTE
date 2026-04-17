@@ -346,6 +346,69 @@
 
     const STORE = { lat: CONFIG.coords.lat, lng: CONFIG.coords.lng };
 
+    // ── SumUp card payment verification ──────────────────────────────────────
+    // When SumUp redirects back, it appends sumup_id to the return_url.
+    // We verify the payment then save the order to Firebase.
+    (async function verifySumUpPayment() {
+        const p         = new URLSearchParams(window.location.search);
+        const sumupId   = p.get('sumup_id');
+        if (!sumupId) return;  // cash order — skip
+
+        try {
+            const r    = await fetch('https://byte-production-4ab2.up.railway.app/api/verify-payment/' + sumupId);
+            const data = await r.json();
+
+            const orderRaw  = sessionStorage.getItem('byteCardOrder');
+            if (!orderRaw) return;
+            const order = JSON.parse(orderRaw);
+            sessionStorage.removeItem('byteCardOrder');
+
+            if (!data.paid) {
+                // Payment failed — redirect back to order page
+                alert('Zahlung nicht erfolgreich. Bitte erneut versuchen.');
+                window.location.href = 'order.html';
+                return;
+            }
+
+            // Payment confirmed — save to Firebase
+            await db.ref('orders/' + order.orderId).set({
+                status:       'confirmed',
+                created_at:   Date.now(),
+                type:         order.orderType,
+                name:         order.name,
+                phone:        order.phone,
+                address:      order.address,
+                items:        order.items,
+                notes:        order.notes,
+                payment:      'CARD: Paid online via SumUp ✓',
+                total:        order.total,
+                distance_km:  order.distance_km,
+                eta_minutes:  order.eta_minutes,
+                sumup_id:     sumupId,
+                tse_signed:   false,
+                tse_tx_id:    '', tse_tx_number: 0,
+                tse_serial:   '', tse_signature:  '', tse_qr_data: ''
+            });
+
+            // Also send email notification
+            fetch('https://formsubmit.co/' + CONFIG.formsubmitEmail, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    Order_ID: '#' + order.orderId,
+                    Name: order.name, Phone: order.phone,
+                    Items: order.items, Address: order.address,
+                    Payment: 'CARD — Paid online via SumUp',
+                    Total: '€' + Number(order.total).toFixed(2)
+                }),
+                keepalive: true
+            }).catch(() => {});
+
+        } catch(e) {
+            console.warn('SumUp verification error:', e.message);
+        }
+    })();
+
     // Show estimated prep time
     db.ref('settings/prepTime').once('value', snap => {
         const t = snap.val();

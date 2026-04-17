@@ -96,13 +96,23 @@
 </div>
 </div>
 </main>
-<!-- Step 2: Cash Payment Modal (Delivery only) -->
+<!-- Step 2: Payment Modal -->
 <div class="combo-modal" id="cash-modal">
 <div class="modal-content">
-<h2 class="modal-title text-gradient">Barzahlung</h2>
-<p style="text-align: center; margin-bottom: 2rem; color: var(--text-muted);">
-                Alle Bestellungen sind <strong>Barzahlung</strong>. Mit welchem Bargeld zahlen Sie?
-            </p>
+<h2 class="modal-title text-gradient">Zahlung</h2>
+
+<!-- Card payment option -->
+<button class="btn" id="card-pay-btn" onclick="payByCard()" type="button"
+    style="width:100%;margin-bottom:1.25rem;background:var(--primary);font-size:1rem;display:flex;align-items:center;justify-content:center;gap:.6rem;">
+    💳 Jetzt online mit Karte bezahlen
+</button>
+
+<div style="text-align:center;color:var(--text-muted);font-size:.85rem;margin-bottom:1.25rem;position:relative;">
+    <span style="background:var(--bg-card);padding:0 .75rem;position:relative;z-index:1;">oder bar bezahlen</span>
+    <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(255,255,255,0.1);z-index:0;"></div>
+</div>
+
+<p style="text-align:center;margin-bottom:1rem;color:var(--text-muted);font-size:.9rem;">Mit welchem Bargeld zahlen Sie?</p>
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
 <button class="btn" onclick="setCashAmount('Exact Change')" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);" type="button">Genaue Änderung</button>
 <button class="btn" onclick="setCashAmount(50)" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);" type="button">Bezahlen mit 50 €</button>
@@ -393,6 +403,80 @@
 
         function closeCashModal() {
             document.getElementById('cash-modal').classList.remove('active');
+        }
+
+        // ── CARD PAYMENT (SumUp) ─────────────────────────────────────────────
+        async function payByCard() {
+            const form = document.getElementById('checkout-form');
+
+            // Validate address for delivery
+            const orderType = document.getElementById('order-type-field').value;
+            if (orderType === 'delivery' || orderType === 'DELIVERY') {
+                const addr = document.getElementById('address-field').value.trim();
+                if (addr.length < 5) {
+                    closeCashModal();
+                    alert('Please enter your delivery address first!');
+                    document.getElementById('address-field').focus();
+                    return;
+                }
+                if (!checkMinOrder()) return;
+            }
+
+            const btn = document.getElementById('card-pay-btn');
+            btn.disabled = true;
+            btn.textContent = 'Wird vorbereitet…';
+
+            const orderId = 'BYT' + Math.random().toString(36).substr(2, 5).toUpperCase();
+            const totals  = recalculateOrder();
+            const distKm  = parseFloat(document.getElementById('items-field')?.dataset.distanceKm) || 0;
+            const etaMins = distKm > 0 ? Math.round(10 + (distKm / 25) * 60) : 0;
+
+            // Save order data to sessionStorage so thanks.html can save to Firebase after payment
+            const orderData = {
+                orderId,
+                orderType: orderType || 'pickup',
+                name:    form.querySelector('[name="name"]')?.value || '',
+                phone:   form.querySelector('[name="phone"]')?.value || '',
+                address: document.getElementById('address-field')?.value || '',
+                items:   document.getElementById('items-field')?.value || '',
+                notes:   form.querySelector('[name="notes"]')?.value || '',
+                total:   totals.gross_total,
+                distance_km:  distKm,
+                eta_minutes:  etaMins,
+                payment: 'CARD: Paid online via SumUp'
+            };
+            sessionStorage.setItem('byteOrderType',  orderType || 'pickup');
+            sessionStorage.setItem('byteOrderId',    orderId);
+            sessionStorage.setItem('byteCardOrder',  JSON.stringify(orderData));
+
+            try {
+                const returnUrl = location.origin + '/thanks.html?oid=' + orderId +
+                                  '&type=' + (orderType || 'pickup').toLowerCase() + '&v=' + Date.now();
+
+                const r = await fetch('https://byte-production-4ab2.up.railway.app/api/create-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_id:   orderId,
+                        amount:     totals.gross_total,
+                        description: 'BYTE Burgers Order ' + orderId,
+                        return_url:  returnUrl
+                    })
+                });
+                const data = await r.json();
+
+                if (!data.ok || !data.payment_url) throw new Error(data.reason || 'Payment setup failed');
+
+                // Redirect to SumUp payment page
+                // thanks.html will read sumup_id from URL after payment and verify
+                const payUrl = data.payment_url + '?return_url=' + encodeURIComponent(returnUrl + '&sumup_id=' + data.checkout_id);
+                window.location.href = payUrl;
+
+            } catch (err) {
+                btn.disabled = false;
+                btn.textContent = '💳 Jetzt online mit Karte bezahlen';
+                alert('Kartenzahlung nicht verfügbar: ' + err.message + '\nBitte bar bezahlen.');
+            }
         }
 
         function setCashAmount(val) { processCashPayment(val); }
