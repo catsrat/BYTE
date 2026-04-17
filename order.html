@@ -287,10 +287,8 @@
                     return;
                 }
                 if (orderType === 'pickup') {
-                    document.getElementById('payment-field').value = 'CASH: Pickup — Customer pays at store.';
-                    checkoutForm.dataset.cashConfirmed = 'true';
                     sessionStorage.setItem('byteOrderType', 'pickup');
-                    showUpsell();
+                    document.getElementById('cash-modal').classList.add('active');
                 } else {
                     if (!checkMinOrder()) return;
                     document.getElementById('cash-modal').classList.add('active');
@@ -492,7 +490,7 @@
             const hiddenField = document.getElementById('payment-field');
             const orderType   = document.getElementById('order-type-field').value;
 
-            if (orderType === 'DELIVERY') {
+            if (orderType === 'delivery' || orderType === 'DELIVERY') {
                 const addr = document.getElementById('address-field').value.trim();
                 if (addr.length < 5) {
                     closeCashModal();
@@ -500,19 +498,20 @@
                     document.getElementById('address-field').focus();
                     return;
                 }
-            }
-
-            if (inputVal === 'Exact Change') {
-                hiddenField.value = "CASH: Exact Change provided.";
+                if (inputVal === 'Exact Change') {
+                    hiddenField.value = "CASH: Exact Change provided.";
+                } else {
+                    const { gross_total } = recalculateOrder();
+                    const change = parseFloat(inputVal) - gross_total;
+                    if (change < 0) return alert(`That is not enough to cover the €${gross_total.toFixed(2)} bill!`);
+                    hiddenField.value = `CASH: Paying with €${parseFloat(inputVal).toFixed(2)} (Driver must bring €${change.toFixed(2)} change)`;
+                }
             } else {
-                const { gross_total } = recalculateOrder();
-                const change = parseFloat(inputVal) - gross_total;
-                if (change < 0) return alert(`That is not enough to cover the €${gross_total.toFixed(2)} bill!`);
-                hiddenField.value = `CASH: Paying with €${parseFloat(inputVal).toFixed(2)} (Driver must bring €${change.toFixed(2)} change)`;
+                // Pickup — cash at store
+                hiddenField.value = 'CASH: Pickup — Customer pays at store.';
             }
 
-            form.dataset.cashConfirmed = "true";
-            sessionStorage.setItem('byteOrderType', 'delivery');
+            form.dataset.cashConfirmed = 'true';
             closeCashModal();
             showUpsell();
         }
