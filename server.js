@@ -184,8 +184,9 @@ app.post('/api/sign-order', async (req, res) => {
         });
         const token = authR.body.access_token;
 
-        // Admin auth
+        // Admin auth — use PIN (TSS must be INITIALIZED for signing)
         await fiskalyReq('PATCH', `/tss/${TSS_ID}/admin`, { admin_pin: ADMIN_PIN }, token);
+        // Note: if this fails, TSS needs /api/init-tss to be called first
 
         // Create transaction
         const txId = crypto.randomUUID();
@@ -277,17 +278,13 @@ app.get('/api/init-tss', async (_req, res) => {
         });
         const token = authR.body.access_token;
 
-        // Auth with PUK to set PIN (in case PIN was never set)
+        // PUK auth — sets PIN AND authenticates admin in one call
         const pukR = await fiskalyReq('PATCH', `/tss/${TSS_ID}/admin`,
             { admin_puk: ADMIN_PIN, new_admin_pin: ADMIN_PIN }, token);
         console.log('PUK auth:', JSON.stringify(pukR.body));
 
-        // Auth with PIN (same agent = same TCP connection)
-        const pinR = await fiskalyReq('PATCH', `/tss/${TSS_ID}/admin`,
-            { admin_pin: ADMIN_PIN }, token);
-        console.log('PIN auth:', JSON.stringify(pinR.body));
-
-        // Initialize TSS
+        // Immediately initialize — admin is authenticated from PUK call above
+        // DO NOT re-auth with PIN — that locks the admin
         const initR = await fiskalyReq('PATCH', `/tss/${TSS_ID}`,
             { state: 'INITIALIZED' }, token);
         console.log('Init:', JSON.stringify(initR.body));
@@ -299,10 +296,11 @@ app.get('/api/init-tss', async (_req, res) => {
 
         return res.json({
             ok: true,
-            tss_state: initR.body.state,
+            tss_state:    initR.body.state,
             client_state: clientR.body.state,
-            puk_result: pukR.body,
-            pin_result: pinR.body
+            puk_result:   pukR.body,
+            init_result:  initR.body,
+            client_result: clientR.body
         });
     } catch (err) {
         console.error('Init TSS error:', err.message);
