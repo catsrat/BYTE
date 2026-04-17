@@ -282,11 +282,10 @@ app.post('/api/sign-order', async (req, res) => {
 });
 
 // ── SumUp config ─────────────────────────────────────────────────────────────
-const SUMUP_CLIENT_ID     = process.env.SUMUP_CLIENT_ID;
-const SUMUP_CLIENT_SECRET = process.env.SUMUP_CLIENT_SECRET;
+const SUMUP_API_KEY       = process.env.SUMUP_API_KEY;
 const SUMUP_MERCHANT_CODE = process.env.SUMUP_MERCHANT_CODE;
 
-function sumupReq(method, path, body, token) {
+function sumupReq(method, path, body) {
     return new Promise((resolve, reject) => {
         const data = body ? JSON.stringify(body) : null;
         const opts = {
@@ -296,7 +295,7 @@ function sumupReq(method, path, body, token) {
             method,
             headers: {
                 'Content-Type':  'application/json',
-                'Authorization': 'Bearer ' + token,
+                'Authorization': 'Bearer ' + SUMUP_API_KEY,
                 ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
             }
         };
@@ -314,46 +313,15 @@ function sumupReq(method, path, body, token) {
     });
 }
 
-async function getSumUpToken() {
-    return new Promise((resolve, reject) => {
-        const body = `grant_type=client_credentials&client_id=${encodeURIComponent(SUMUP_CLIENT_ID)}&client_secret=${encodeURIComponent(SUMUP_CLIENT_SECRET)}&scope=payments`;
-        const opts = {
-            hostname: 'api.sumup.com',
-            port: 443,
-            path: '/token',
-            method: 'POST',
-            headers: {
-                'Content-Type':   'application/x-www-form-urlencoded',
-                'Content-Length': Buffer.byteLength(body)
-            }
-        };
-        const req = https.request(opts, res => {
-            let raw = '';
-            res.on('data', c => raw += c);
-            res.on('end', () => {
-                try {
-                    const r = JSON.parse(raw);
-                    if (r.access_token) resolve(r.access_token);
-                    else reject(new Error('SumUp auth failed: ' + raw));
-                } catch(e) { reject(e); }
-            });
-        });
-        req.on('error', reject);
-        req.write(body);
-        req.end();
-    });
-}
-
 // ── API: Create SumUp online payment ─────────────────────────────────────────
 app.post('/api/create-payment', async (req, res) => {
     const { order_id, amount, description, return_url } = req.body;
 
-    if (!SUMUP_CLIENT_ID || !SUMUP_MERCHANT_CODE) {
+    if (!SUMUP_API_KEY || !SUMUP_MERCHANT_CODE) {
         return res.json({ ok: false, reason: 'SumUp not configured' });
     }
 
     try {
-        const token = await getSumUpToken();
         const r = await sumupReq('POST', '/v0.1/checkouts', {
             checkout_reference: order_id,
             amount:             parseFloat(Number(amount).toFixed(2)),
@@ -361,7 +329,7 @@ app.post('/api/create-payment', async (req, res) => {
             merchant_code:      SUMUP_MERCHANT_CODE,
             description:        description || 'BYTE Burgers Order ' + order_id,
             redirect_url:       return_url  || 'https://byteburgers.shop/thanks.html'
-        }, token);
+        });
 
         if (r.status !== 200 && r.status !== 201) {
             throw new Error('SumUp checkout failed: ' + JSON.stringify(r.body));
@@ -383,8 +351,7 @@ app.get('/api/verify-payment/:checkoutId', async (req, res) => {
     const { checkoutId } = req.params;
 
     try {
-        const token = await getSumUpToken();
-        const r = await sumupReq('GET', `/v0.1/checkouts/${checkoutId}`, null, token);
+        const r = await sumupReq('GET', `/v0.1/checkouts/${checkoutId}`, null);
 
         return res.json({
             ok:       true,
