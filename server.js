@@ -26,21 +26,22 @@ app.use((req, res, next) => {
 });
 
 // ── Fiskaly SIGN DE config ───────────────────────────────────────────────────
-// Using kassensichv.fiskaly.com (cloud API, no SMAERS binary required)
-// Admin auth is token-scoped — persists across requests within the same token
+// Backend (management): kassensichv.fiskaly.com       — TSS create/init
+// Middleware (signing):  kassensichv-middleware.fiskaly.com — transactions
 const FISKALY_API_KEY    = process.env.FISKALY_API_KEY;
 const FISKALY_API_SECRET = process.env.FISKALY_API_SECRET;
-const FISKALY_BASE       = 'kassensichv.fiskaly.com';
-const FISKALY_API_PATH   = '/api/v2';
+const BACKEND_HOST       = 'kassensichv.fiskaly.com';
+const MIDDLEWARE_HOST    = 'kassensichv-middleware.fiskaly.com';
+const API_PATH           = '/api/v2';
 
 // ── Fiskaly REST helper ──────────────────────────────────────────────────────
-function fiskalyReq(method, urlPath, body, token) {
+function fiskalyReq(method, urlPath, body, token, host) {
     return new Promise((resolve, reject) => {
         const data = body ? JSON.stringify(body) : null;
         const opts = {
-            hostname: FISKALY_BASE,
+            hostname: host || BACKEND_HOST,
             port: 443,
-            path: FISKALY_API_PATH + urlPath,
+            path: API_PATH + urlPath,
             method,
             headers: {
                 'Content-Type': 'application/json',
@@ -62,6 +63,7 @@ function fiskalyReq(method, urlPath, body, token) {
     });
 }
 
+// Auth always via backend
 async function getToken() {
     const r = await fiskalyReq('POST', '/auth', {
         api_key: FISKALY_API_KEY,
@@ -203,20 +205,13 @@ app.post('/api/sign-order', async (req, res) => {
     try {
         const token = await getToken();
 
-        // Admin auth (token-scoped on SIGN DE cloud — no SMAERS needed)
-        const adminR = await fiskalyReq('PATCH', `/tss/${TSS_ID}/admin`,
-            { admin_pin: ADMIN_PIN }, token);
-        if (adminR.body._type && adminR.body._type.includes('ERROR')) {
-            throw new Error('Admin auth failed: ' + JSON.stringify(adminR.body));
-        }
-
-        // Create transaction (ACTIVE)
+        // Create transaction via MIDDLEWARE (required for signing)
         const txId = crypto.randomUUID();
         await fiskalyReq('PUT', `/tss/${TSS_ID}/tx/${txId}`, {
             state:     'ACTIVE',
             client_id: CLIENT_ID,
             type:      'RECEIPT'
-        }, token);
+        }, token, MIDDLEWARE_HOST);
 
         // Build VAT amounts
         const vatAmounts = [];
@@ -237,7 +232,7 @@ app.post('/api/sign-order', async (req, res) => {
             amount: Number(gross_total).toFixed(2)
         });
 
-        // Finish (sign) transaction
+        // Finish (sign) transaction via MIDDLEWARE
         const finishR = await fiskalyReq('PUT', `/tss/${TSS_ID}/tx/${txId}?tx_revision=2`, {
             state:     'FINISHED',
             client_id: CLIENT_ID,
@@ -254,7 +249,7 @@ app.post('/api/sign-order', async (req, res) => {
                     }
                 }
             }
-        }, token);
+        }, token, MIDDLEWARE_HOST);
 
         if (finishR.status !== 200) {
             throw new Error('Sign failed: ' + JSON.stringify(finishR.body));
