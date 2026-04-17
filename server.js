@@ -4,6 +4,10 @@ const { spawn } = require('child_process');
 const https   = require('https');
 const crypto  = require('crypto');
 
+// Persistent HTTPS agent — keeps TCP connection alive so Fiskaly admin
+// session survives between the auth call and the privileged operation
+const fiskalyAgent = new https.Agent({ keepAlive: true, maxSockets: 1 });
+
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -77,6 +81,7 @@ function fiskalyReq(method, urlPath, body, token) {
             port: 443,
             path: url.pathname + url.search,
             method,
+            agent: fiskalyAgent,   // reuse TCP connection — keeps admin session alive
             headers: {
                 'Content-Type': 'application/json',
                 ...(token  ? { 'Authorization': 'Bearer ' + token } : {}),
@@ -255,6 +260,53 @@ app.post('/api/sign-order', async (req, res) => {
     } catch (err) {
         console.error('Sign error:', err.message);
         return res.json({ signed: false, reason: err.message });
+    }
+});
+
+// ── API: Initialize TSS (call once if tse_signed keeps false) ────────────────
+app.get('/api/init-tss', async (_req, res) => {
+    const TSS_ID    = process.env.FISKALY_TSS_ID;
+    const CLIENT_ID = process.env.FISKALY_CLIENT_ID;
+    const ADMIN_PIN = process.env.FISKALY_ADMIN_PIN;
+
+    if (!TSS_ID) return res.json({ ok: false, reason: 'FISKALY_TSS_ID not set' });
+
+    try {
+        const authR = await fiskalyReq('POST', '/auth', {
+            api_key: FISKALY_API_KEY, api_secret: FISKALY_API_SECRET
+        });
+        const token = authR.body.access_token;
+
+        // Auth with PUK to set PIN (in case PIN was never set)
+        const pukR = await fiskalyReq('PATCH', `/tss/${TSS_ID}/admin`,
+            { admin_puk: ADMIN_PIN, new_admin_pin: ADMIN_PIN }, token);
+        console.log('PUK auth:', JSON.stringify(pukR.body));
+
+        // Auth with PIN (same agent = same TCP connection)
+        const pinR = await fiskalyReq('PATCH', `/tss/${TSS_ID}/admin`,
+            { admin_pin: ADMIN_PIN }, token);
+        console.log('PIN auth:', JSON.stringify(pinR.body));
+
+        // Initialize TSS
+        const initR = await fiskalyReq('PATCH', `/tss/${TSS_ID}`,
+            { state: 'INITIALIZED' }, token);
+        console.log('Init:', JSON.stringify(initR.body));
+
+        // Create client
+        const clientR = await fiskalyReq('PUT', `/tss/${TSS_ID}/client/${CLIENT_ID}`,
+            { serial_number: 'byte-pos-001' }, token);
+        console.log('Client:', JSON.stringify(clientR.body));
+
+        return res.json({
+            ok: true,
+            tss_state: initR.body.state,
+            client_state: clientR.body.state,
+            puk_result: pukR.body,
+            pin_result: pinR.body
+        });
+    } catch (err) {
+        console.error('Init TSS error:', err.message);
+        return res.json({ ok: false, reason: err.message });
     }
 });
 
