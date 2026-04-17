@@ -335,6 +335,29 @@
             const distKm  = parseFloat(document.getElementById('items-field')?.dataset.distanceKm) || 0;
             const etaMins = distKm > 0 ? Math.round(10 + (distKm / 25) * 60) : 0;
 
+            // ── Fiskaly TSE signing (non-blocking — order saves even if signing fails)
+            let tseData = {};
+            try {
+                const signRes = await fetch('https://byte-production-4ab2.up.railway.app/api/sign-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        orderId,
+                        items_gross:    totals.items_gross,
+                        net_food:       totals.net_food,
+                        vat_7:          totals.vat_7,
+                        net_bev:        totals.net_bev,
+                        vat_19:         totals.vat_19,
+                        delivery_gross: totals.delivery_gross,
+                        total_vat:      totals.total_vat,
+                        gross_total:    totals.gross_total,
+                        payment_type:   'cash'
+                    })
+                });
+                tseData = await signRes.json();
+                if (tseData.signed) console.log('TSE signed:', tseData.tx_number);
+            } catch(e) { console.warn('TSE signing skipped:', e.message); }
+
             try {
                 await db.ref('orders/' + orderId).set({
                     status: 'confirmed', created_at: Date.now(), type: orderType,
@@ -345,7 +368,14 @@
                     payment: document.getElementById('payment-field')?.value || '',
                     notes:   form.querySelector('[name="notes"]')?.value || '',
                     total:   totals.gross_total,
-                    distance_km: distKm, eta_minutes: etaMins
+                    distance_km: distKm, eta_minutes: etaMins,
+                    // TSE fields (empty if signing failed)
+                    tse_signed:    tseData.signed || false,
+                    tse_tx_id:     tseData.tx_id || '',
+                    tse_tx_number: tseData.tx_number || 0,
+                    tse_serial:    tseData.tss_serial || '',
+                    tse_signature: tseData.signature || '',
+                    tse_qr_data:   tseData.qr_data || ''
                 });
             } catch(e) {}
 

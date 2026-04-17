@@ -1,7 +1,6 @@
 const express = require('express');
 const path    = require('path');
-const { execSync, spawn } = require('child_process');
-const http    = require('http');
+const { spawn } = require('child_process');
 const https   = require('https');
 const crypto  = require('crypto');
 
@@ -98,33 +97,6 @@ function fiskalyReq(method, urlPath, body, token) {
     });
 }
 
-// ── Fiskaly via local SMAERS ─────────────────────────────────────────────────
-function smaersReq(method, urlPath, body) {
-    return new Promise((resolve, reject) => {
-        const data = body ? JSON.stringify(body) : null;
-        const opts = {
-            hostname: '127.0.0.1',
-            port: SMAERS_PORT,
-            path: urlPath,
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
-            }
-        };
-        const req = http.request(opts, res => {
-            let raw = '';
-            res.on('data', c => raw += c);
-            res.on('end', () => {
-                try { resolve({ status: res.statusCode, body: JSON.parse(raw || '{}') }); }
-                catch { resolve({ status: res.statusCode, body: {} }); }
-            });
-        });
-        req.on('error', reject);
-        if (data) req.write(data);
-        req.end();
-    });
-}
 
 // ── Setup TSS (runs once on startup if env vars present) ────────────────────
 async function setupFiskaly() {
@@ -165,6 +137,14 @@ async function setupFiskaly() {
             admin_puk: puk, new_admin_pin: pin
         }, token);
 
+        // Auth with new PIN then initialize
+        await fiskalyReq('PATCH', `/tss/${tssId}/admin`, { admin_pin: pin }, token);
+        await fiskalyReq('PATCH', `/tss/${tssId}`, { state: 'INITIALIZED' }, token);
+
+        // Create client
+        await fiskalyReq('PUT', `/tss/${tssId}/client/${clientId}`,
+            { serial_number: 'byte-pos-001' }, token);
+
         console.log('=== ADD THESE TO RAILWAY ENV VARS ===');
         console.log('FISKALY_TSS_ID=' + tssId);
         console.log('FISKALY_CLIENT_ID=' + clientId);
@@ -177,8 +157,8 @@ async function setupFiskaly() {
 
 // ── API: Sign an order ────────────────────────────────────────────────────────
 app.post('/api/sign-order', async (req, res) => {
-    const { orderId, items_gross, net_food, vat_7, net_bev, vat_19,
-            delivery_gross, total_vat, gross_total, payment_type } = req.body;
+    const { net_food, vat_7, net_bev, vat_19,
+            delivery_gross, gross_total, payment_type } = req.body;
 
     if (!FISKALY_API_KEY) {
         return res.json({ signed: false, reason: 'Fiskaly not configured' });
@@ -279,7 +259,7 @@ app.post('/api/sign-order', async (req, res) => {
 });
 
 // ── API: Health check ─────────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
     res.json({
         status: 'ok',
         fiskaly: !!FISKALY_API_KEY,
