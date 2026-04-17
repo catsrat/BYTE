@@ -1,10 +1,17 @@
 {
   "name": "byte-burgers-site",
   "version": "1.0.0",
-  "description": "BYTE Burgers vibrant 3D website",
+  "description": "BYTE Burgers ordering platform",
+  "main": "server.js",
   "scripts": {
-    "dev": "npx -y serve .",
-    "start": "npx -y serve ."
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": [],
   "author": "",
