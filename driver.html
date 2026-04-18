@@ -234,23 +234,14 @@
 <script src="js/config.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
-    let DRIVER_PIN = '2580'; // default — overridden by Firebase on load
-
     firebase.initializeApp(CONFIG.firebase);
-    const db = firebase.database();
+    const db   = firebase.database();
+    const auth = firebase.auth();
 
     let gpsInterval = null;
     let activeOrder  = null;
-    let pinReady = false;
-
-    // Load PIN from Firebase before allowing unlock
-    db.ref('settings/driverPin').once('value', snap => {
-        if (snap.val()) DRIVER_PIN = snap.val();
-        pinReady = true;
-    });
-    // Fallback: if Firebase takes >3s, allow entry with default PIN
-    setTimeout(() => { pinReady = true; }, 3000);
 
     // ── PIN ──────────────────────────────────
     const digits = ['p1','p2','p3','p4'].map(id => document.getElementById(id));
@@ -265,25 +256,23 @@
         });
     });
 
-    function getPin() { return digits.map(d => d.value).join(''); }
-
     function checkPin() {
-        if (!pinReady) {
-            document.getElementById('pin-error').textContent = 'Loading… try again in a second.';
-            digits.forEach(d => d.value = '');
-            digits[0].focus();
-            return;
-        }
-        if (getPin() === DRIVER_PIN) {
-            document.getElementById('pin-screen').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            initNotifButton();
-            listenOrders();
-        } else {
-            document.getElementById('pin-error').textContent = 'Wrong PIN — try again.';
-            digits.forEach(d => d.value = '');
-            digits[0].focus();
-        }
+        const pin = digits.map(d => d.value).join('');
+        if (pin.length < 4) return;
+        const errEl = document.getElementById('pin-error');
+        errEl.textContent = 'Checking…';
+        auth.signInWithEmailAndPassword(CONFIG.driverEmail, pin)
+            .then(() => {
+                document.getElementById('pin-screen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                initNotifButton();
+                listenOrders();
+            })
+            .catch(() => {
+                errEl.textContent = 'Wrong PIN — try again.';
+                digits.forEach(d => d.value = '');
+                digits[0].focus();
+            });
     }
 
     // ── NOTIFICATIONS ────────────────────────

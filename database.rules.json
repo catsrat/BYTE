@@ -1,0 +1,23 @@
+{
+  "rules": {
+    "orders": {
+      "$orderId": {
+        ".read": true,
+        ".write": "!data.exists() || (auth != null && auth.token.email != null)"
+      },
+      ".read": "auth != null && auth.token.email != null"
+    },
+    "settings": {
+      ".read": "auth != null && auth.token.email != null",
+      ".write": "auth != null && auth.token.email != null",
+      "minOrder":  { ".read": true },
+      "prepTime":  { ".read": true },
+      "combos":    { ".read": true },
+      "adminPin":  { ".read": false, ".write": false }
+    },
+    "menu": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email != null"
+    }
+  }
+}

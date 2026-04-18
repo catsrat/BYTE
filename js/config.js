@@ -31,6 +31,16 @@ const CONFIG = {
   googleReviewLink: 'https://maps.app.goo.gl/sFAPyQW8HifLWtUH6',
   formsubmitEmail:  'pvsheram001@Gmail.com',
 
+  // ── API (Railway backend) ─────────────────────────────────────────────────
+  apiBase: 'https://byte-production-4ab2.up.railway.app',
+
+  // ── Auth (Firebase Authentication email accounts) ─────────────────────────
+  // These emails are used as usernames for admin and driver login.
+  // Create these accounts in Firebase Console → Authentication → Add user.
+  // The password for each account is the 4-digit PIN.
+  adminEmail:  'admin@byteburgers.shop',
+  driverEmail: 'driver@byteburgers.shop',
+
   // ── Firebase ──────────────────────────────────────────────────────────────
   firebase: {
     apiKey:            'AIzaSyCfAfJkP9EsxPR1Zp7J8jctgSoxIfM_gbE',

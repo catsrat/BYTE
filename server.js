@@ -3,6 +3,22 @@ const path    = require('path');
 const https   = require('https');
 const crypto  = require('crypto');
 
+// ── Firebase Admin SDK (for driver PIN updates) ──────────────────────────────
+let fbAdmin = null;
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+        const admin = require('firebase-admin');
+        fbAdmin = admin.initializeApp({
+            credential: admin.credential.cert(
+                JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+            )
+        });
+        console.log('Firebase Admin SDK initialized');
+    } catch (e) {
+        console.error('Firebase Admin SDK init failed:', e.message);
+    }
+}
+
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -20,7 +36,7 @@ app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (allowed.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS') return res.sendStatus(200);
     next();
 });
@@ -369,6 +385,37 @@ app.get('/api/payment-status/:orderId', async (req, res) => {
     } catch (err) {
         console.error('SumUp verify error:', err.message);
         return res.json({ ok: false, reason: err.message });
+    }
+});
+
+// ── API: Update driver PIN (requires admin Firebase ID token) ─────────────────
+app.post('/api/update-driver-pin', async (req, res) => {
+    if (!fbAdmin) {
+        return res.status(503).json({ ok: false, reason: 'Firebase Admin SDK not configured — add FIREBASE_SERVICE_ACCOUNT env var' });
+    }
+    const token = (req.headers.authorization || '').replace('Bearer ', '');
+    if (!token) return res.status(401).json({ ok: false, reason: 'No token' });
+
+    const { pin } = req.body;
+    if (!/^\d{4}$/.test(pin)) return res.status(400).json({ ok: false, reason: 'PIN must be 4 digits' });
+
+    try {
+        const admin = require('firebase-admin');
+        const decoded = await admin.auth(fbAdmin).verifyIdToken(token);
+        // Only the admin account can change the driver PIN
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@byteburgers.shop';
+        if (decoded.email !== adminEmail) {
+            return res.status(403).json({ ok: false, reason: 'Not authorised' });
+        }
+
+        const driverEmail = process.env.DRIVER_EMAIL || 'driver@byteburgers.shop';
+        const driverUser  = await admin.auth(fbAdmin).getUserByEmail(driverEmail);
+        await admin.auth(fbAdmin).updateUser(driverUser.uid, { password: pin });
+
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error('update-driver-pin error:', err.message);
+        return res.status(500).json({ ok: false, reason: err.message });
     }
 });
 

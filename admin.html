@@ -288,7 +288,6 @@ label.form-label { font-size:.78rem; color:var(--muted); display:block; margin-b
     <img src="images/logo-white.png" alt="BYTE Burgers"/>
     <div class="pin-label">Restricted Access</div>
     <div class="pin-title">Admin Panel</div>
-    <div id="pin-stats" style="display:flex;gap:1.5rem;margin:.5rem 0 .25rem;justify-content:center"></div>
     <div class="pin-digits">
         <input class="pin-digit" id="p1" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
         <input class="pin-digit" id="p2" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
@@ -314,6 +313,7 @@ label.form-label { font-size:.78rem; color:var(--muted); display:block; margin-b
                     <span class="toggle-slider"></span>
                 </label>
             </div>
+            <button onclick="auth.signOut().then(()=>location.reload())" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#888;font-family:inherit;font-size:.75rem;padding:.3rem .7rem;cursor:pointer;">Log out</button>
         </div>
     </div>
 
@@ -576,49 +576,20 @@ label.form-label { font-size:.78rem; color:var(--muted); display:block; margin-b
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="js/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────────
-let ADMIN_PIN = '1234'; // default — overridden by Firebase on load
-let adminPinReady = false;
-
 firebase.initializeApp(CONFIG.firebase);
-const db = firebase.database();
+const db   = firebase.database();
+const auth = firebase.auth();
 
 const STORE = { lat: CONFIG.coords.lat, lng: CONFIG.coords.lng };
 
-// Load admin PIN from Firebase
-db.ref('settings/adminPin').once('value', snap => {
-    if (snap.val()) ADMIN_PIN = snap.val();
-    adminPinReady = true;
-});
-setTimeout(() => { adminPinReady = true; }, 3000); // fallback
-
-// ── Dashboard stats on pin screen ───────────────────────────────────────────
-db.ref('orders').once('value', snap => {
-    const all = snap.val();
-    if (!all) return;
-    const todayStr = new Date().toISOString().slice(0,10);
-    const todayOrders = Object.values(all).filter(o => (o.timestamp||'').startsWith(todayStr));
-    const revenue = todayOrders.reduce((s,o) => s + (o.total||0), 0);
-    const statsEl = document.getElementById('pin-stats');
-    if (!statsEl) return;
-    statsEl.innerHTML = `
-        <div style="text-align:center;background:rgba(255,127,0,0.1);border:1px solid rgba(255,127,0,0.3);border-radius:12px;padding:.6rem 1.2rem">
-            <div style="font-size:1.4rem;font-weight:900;color:var(--primary)">€${revenue.toFixed(0)}</div>
-            <div style="font-size:.7rem;color:#888;text-transform:uppercase;letter-spacing:1px">Today's Revenue</div>
-        </div>
-        <div style="text-align:center;background:rgba(255,127,0,0.1);border:1px solid rgba(255,127,0,0.3);border-radius:12px;padding:.6rem 1.2rem">
-            <div style="font-size:1.4rem;font-weight:900;color:var(--primary)">${todayOrders.length}</div>
-            <div style="font-size:.7rem;color:#888;text-transform:uppercase;letter-spacing:1px">Orders Today</div>
-        </div>
-    `;
-});
-
-// ── PIN ──────────────────────────────────────────────────────────────────────
+// ── PIN / AUTH ───────────────────────────────────────────────────────────────
 const digits = ['p1','p2','p3','p4'].map(id => document.getElementById(id));
 digits.forEach((input, i) => {
     input.addEventListener('input', () => {
@@ -631,23 +602,22 @@ digits.forEach((input, i) => {
 });
 
 function checkPin() {
-    const entered = digits.map(d => d.value).join('');
-    if (!adminPinReady) {
-        document.getElementById('pin-error').textContent = 'Loading… try again in a second.';
-        digits.forEach(d => d.value = '');
-        digits[0].focus();
-        return;
-    }
-    if (entered === ADMIN_PIN) {
-        document.getElementById('pin-screen').style.display = 'none';
-        const app = document.getElementById('app');
-        app.style.display = 'flex';
-        initApp();
-    } else {
-        document.getElementById('pin-error').textContent = 'Wrong PIN — try again.';
-        digits.forEach(d => d.value = '');
-        digits[0].focus();
-    }
+    const pin = digits.map(d => d.value).join('');
+    if (pin.length < 4) return;
+    const errEl = document.getElementById('pin-error');
+    errEl.textContent = 'Checking…';
+    auth.signInWithEmailAndPassword(CONFIG.adminEmail, pin)
+        .then(() => {
+            document.getElementById('pin-screen').style.display = 'none';
+            const app = document.getElementById('app');
+            app.style.display = 'flex';
+            initApp();
+        })
+        .catch(() => {
+            errEl.textContent = 'Wrong PIN — try again.';
+            digits.forEach(d => d.value = '');
+            digits[0].focus();
+        });
 }
 
 // ── TABS ────────────────────────────────────────────────────────────────────
@@ -1409,24 +1379,38 @@ function saveRules() {
 function saveDriverPin() {
     const pin = document.getElementById('new-driver-pin').value;
     if (!/^\d{4}$/.test(pin)) { alert('PIN must be exactly 4 digits'); return; }
-    db.ref('settings/driverPin').set(pin);
-    const msg = document.getElementById('driver-pin-save-msg');
-    msg.style.display = 'block';
-    document.getElementById('new-driver-pin').value = '';
-    setTimeout(() => { msg.style.display = 'none'; }, 3000);
-    showToast('🔑 Driver PIN updated');
+    auth.currentUser.getIdToken().then(idToken => {
+        return fetch(CONFIG.apiBase + '/api/update-driver-pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+            body: JSON.stringify({ pin })
+        }).then(r => r.json());
+    }).then(data => {
+        if (!data.ok) { alert('Could not update driver PIN: ' + data.reason); return; }
+        const msg = document.getElementById('driver-pin-save-msg');
+        msg.style.display = 'block';
+        document.getElementById('new-driver-pin').value = '';
+        setTimeout(() => { msg.style.display = 'none'; }, 3000);
+        showToast('🔑 Driver PIN updated');
+    }).catch(err => {
+        alert('Error updating driver PIN: ' + err.message);
+    });
 }
 
 function saveAdminPin() {
     const pin = document.getElementById('new-admin-pin').value;
     if (!/^\d{4}$/.test(pin)) { alert('PIN must be exactly 4 digits'); return; }
-    db.ref('settings/adminPin').set(pin);
-    ADMIN_PIN = pin; // update in memory immediately
-    const msg = document.getElementById('admin-pin-save-msg');
-    msg.style.display = 'block';
-    document.getElementById('new-admin-pin').value = '';
-    setTimeout(() => { msg.style.display = 'none'; }, 3000);
-    showToast('🔑 Admin PIN updated');
+    auth.currentUser.updatePassword(pin)
+        .then(() => {
+            const msg = document.getElementById('admin-pin-save-msg');
+            msg.style.display = 'block';
+            document.getElementById('new-admin-pin').value = '';
+            setTimeout(() => { msg.style.display = 'none'; }, 3000);
+            showToast('🔑 Admin PIN updated');
+        })
+        .catch(err => {
+            alert('Could not update PIN: ' + err.message);
+        });
 }
 
 function saveComboPrices() {

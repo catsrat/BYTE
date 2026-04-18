@@ -356,7 +356,7 @@
         if (!isCard || !oid) return;  // cash order — skip
 
         try {
-            const r    = await fetch('https://byte-production-4ab2.up.railway.app/api/payment-status/' + oid);
+            const r    = await fetch(CONFIG.apiBase + '/api/payment-status/' + oid);
             const data = await r.json();
 
             const orderRaw  = sessionStorage.getItem('byteCardOrder');
