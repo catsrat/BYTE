@@ -186,6 +186,8 @@
         <input class="pin-digit" id="p2" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
         <input class="pin-digit" id="p3" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
         <input class="pin-digit" id="p4" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
+        <input class="pin-digit" id="p5" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
+        <input class="pin-digit" id="p6" maxlength="1" inputmode="numeric" type="password" autocomplete="off"/>
     </div>
     <div class="pin-error" id="pin-error"></div>
     <button class="pin-btn" onclick="checkPin()">Unlock</button>
@@ -244,12 +246,12 @@
     let activeOrder  = null;
 
     // ── PIN ──────────────────────────────────
-    const digits = ['p1','p2','p3','p4'].map(id => document.getElementById(id));
+    const digits = ['p1','p2','p3','p4','p5','p6'].map(id => document.getElementById(id));
 
     digits.forEach((input, i) => {
         input.addEventListener('input', () => {
             if (input.value && i < digits.length - 1) digits[i + 1].focus();
-            if (digits.map(d => d.value).join('').length === 4) checkPin();
+            if (digits.map(d => d.value).join('').length === 6) checkPin();
         });
         input.addEventListener('keydown', e => {
             if (e.key === 'Backspace' && !input.value && i > 0) digits[i - 1].focus();
@@ -258,7 +260,7 @@
 
     function checkPin() {
         const pin = digits.map(d => d.value).join('');
-        if (pin.length < 4) return;
+        if (pin.length < 6) return;
         const errEl = document.getElementById('pin-error');
         errEl.textContent = 'Checking…';
         auth.signInWithEmailAndPassword(CONFIG.driverEmail, pin)
