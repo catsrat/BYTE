@@ -96,53 +96,26 @@
 </div>
 </div>
 </main>
-<!-- Step 2: Payment Modal -->
+<!-- Step 2: Cash Payment Modal (Delivery only) -->
 <div class="combo-modal" id="cash-modal">
 <div class="modal-content">
-<h2 class="modal-title text-gradient">Zahlung</h2>
-
-<!-- Card payment option (always shown) -->
-<button class="btn" id="card-pay-btn" onclick="payByCard()" type="button"
-    style="width:100%;margin-bottom:1.25rem;background:var(--primary);font-size:1rem;display:flex;align-items:center;justify-content:center;gap:.6rem;">
-    💳 Jetzt online mit Karte bezahlen
-</button>
-
-<!-- SumUp card widget mounts here after button click -->
-<div id="sumup-widget-container" style="display:none;margin-bottom:1rem;">
-    <div id="sumup-card"></div>
+<h2 class="modal-title text-gradient">Barzahlung</h2>
+<p style="text-align: center; margin-bottom: 2rem; color: var(--text-muted);">
+                Alle Bestellungen sind <strong>Barzahlung</strong>. Mit welchem Bargeld zahlen Sie?
+            </p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+<button class="btn" onclick="setCashAmount('Exact Change')" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);" type="button">Genaue Änderung</button>
+<button class="btn" onclick="setCashAmount(50)" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);" type="button">Bezahlen mit 50 €</button>
+<button class="btn" onclick="setCashAmount(100)" style="background: transparent; border: 1px solid var(--primary); color: var(--primary); grid-column: span 2;" type="button">Bezahlen mit 100 €</button>
 </div>
-
-<div style="text-align:center;color:var(--text-muted);font-size:.85rem;margin-bottom:1.25rem;position:relative;">
-    <span style="background:var(--bg-card);padding:0 .75rem;position:relative;z-index:1;">oder bar bezahlen</span>
-    <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(255,255,255,0.1);z-index:0;"></div>
+<div class="form-group full-width" style="margin-bottom: 0;">
+<label class="form-label">Oder geben Sie einen benutzerdefinierten Betrag ein:</label>
+<div style="display: flex; gap: 1rem;">
+<input class="form-input" id="custom-cash-input" placeholder="z.B. 20" style="flex: 1;" type="number"/>
+<button class="btn" onclick="submitCustomCash()" style="padding: 0 1.5rem;" type="button">Bestätigen</button>
 </div>
-
-<!-- Pickup: simple "pay at store" button -->
-<div id="cash-pickup-section" style="display:none;">
-    <button class="btn" onclick="processCashPayment('store')" type="button"
-        style="width:100%;background:transparent;border:1px solid var(--primary);color:var(--primary);">
-        💵 Bar an der Abholung bezahlen
-    </button>
 </div>
-
-<!-- Delivery: denomination buttons -->
-<div id="cash-delivery-section" style="display:none;">
-    <p style="text-align:center;margin-bottom:1rem;color:var(--text-muted);font-size:.9rem;">Mit welchem Bargeld zahlen Sie?</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
-        <button class="btn" onclick="setCashAmount('Exact Change')" style="background:transparent;border:1px solid var(--primary);color:var(--primary);" type="button">Genaue Änderung</button>
-        <button class="btn" onclick="setCashAmount(50)"  style="background:transparent;border:1px solid var(--primary);color:var(--primary);" type="button">Bezahlen mit 50 €</button>
-        <button class="btn" onclick="setCashAmount(100)" style="background:transparent;border:1px solid var(--primary);color:var(--primary);grid-column:span 2;" type="button">Bezahlen mit 100 €</button>
-    </div>
-    <div class="form-group full-width" style="margin-bottom:0;">
-        <label class="form-label">Oder geben Sie einen benutzerdefinierten Betrag ein:</label>
-        <div style="display:flex;gap:1rem;">
-            <input class="form-input" id="custom-cash-input" placeholder="z.B. 20" style="flex:1;" type="number"/>
-            <button class="btn" onclick="submitCustomCash()" style="padding:0 1.5rem;" type="button">Bestätigen</button>
-        </div>
-    </div>
-</div>
-
-<button class="btn" onclick="closeCashModal()" style="width:100%;margin-top:1.5rem;background:var(--bg-dark);" type="button">Zurück</button>
+<button class="btn" onclick="closeCashModal()" style="width: 100%; margin-top: 1.5rem; background: var(--bg-dark);" type="button">Zurück</button>
 </div>
 </div>
 <script src="js/config.js"></script>
@@ -304,11 +277,13 @@
                     return;
                 }
                 if (orderType === 'pickup') {
+                    document.getElementById('payment-field').value = 'CASH: Pickup — Customer pays at store.';
+                    checkoutForm.dataset.cashConfirmed = 'true';
                     sessionStorage.setItem('byteOrderType', 'pickup');
-                    openPaymentModal('pickup');
+                    showUpsell();
                 } else {
                     if (!checkMinOrder()) return;
-                    openPaymentModal('delivery');
+                    document.getElementById('cash-modal').classList.add('active');
                 }
             });
         });
@@ -360,29 +335,6 @@
             const distKm  = parseFloat(document.getElementById('items-field')?.dataset.distanceKm) || 0;
             const etaMins = distKm > 0 ? Math.round(10 + (distKm / 25) * 60) : 0;
 
-            // ── Fiskaly TSE signing (non-blocking — order saves even if signing fails)
-            let tseData = {};
-            try {
-                const signRes = await fetch('https://byte-production-4ab2.up.railway.app/api/sign-order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        orderId,
-                        items_gross:    totals.items_gross,
-                        net_food:       totals.net_food,
-                        vat_7:          totals.vat_7,
-                        net_bev:        totals.net_bev,
-                        vat_19:         totals.vat_19,
-                        delivery_gross: totals.delivery_gross,
-                        total_vat:      totals.total_vat,
-                        gross_total:    totals.gross_total,
-                        payment_type:   'cash'
-                    })
-                });
-                tseData = await signRes.json();
-                if (tseData.signed) console.log('TSE signed:', tseData.tx_number);
-            } catch(e) { console.warn('TSE signing skipped:', e.message); }
-
             try {
                 await db.ref('orders/' + orderId).set({
                     status: 'confirmed', created_at: Date.now(), type: orderType,
@@ -393,14 +345,7 @@
                     payment: document.getElementById('payment-field')?.value || '',
                     notes:   form.querySelector('[name="notes"]')?.value || '',
                     total:   totals.gross_total,
-                    distance_km: distKm, eta_minutes: etaMins,
-                    // TSE fields (empty if signing failed)
-                    tse_signed:    tseData.signed || false,
-                    tse_tx_id:     tseData.tx_id || '',
-                    tse_tx_number: tseData.tx_number || 0,
-                    tse_serial:    tseData.tss_serial || '',
-                    tse_signature: tseData.signature || '',
-                    tse_qr_data:   tseData.qr_data || ''
+                    distance_km: distKm, eta_minutes: etaMins
                 });
             } catch(e) {}
 
@@ -416,153 +361,8 @@
 
         function closeFulfillmentModal() {}  // kept for safety, no longer used
 
-        function openPaymentModal(type) {
-            document.getElementById('cash-pickup-section').style.display   = type === 'pickup'   ? '' : 'none';
-            document.getElementById('cash-delivery-section').style.display = type === 'delivery' ? '' : 'none';
-            document.getElementById('cash-modal').classList.add('active');
-        }
-
         function closeCashModal() {
             document.getElementById('cash-modal').classList.remove('active');
-        }
-
-        // ── CARD PAYMENT (SumUp widget) ──────────────────────────────────────
-        let sumupOrderId = null;
-
-        async function payByCard() {
-            const form      = document.getElementById('checkout-form');
-            const orderType = document.getElementById('order-type-field').value;
-
-            // Validate address for delivery
-            if (orderType === 'delivery' || orderType === 'DELIVERY') {
-                const addr = document.getElementById('address-field').value.trim();
-                if (addr.length < 5) {
-                    closeCashModal();
-                    alert('Please enter your delivery address first!');
-                    document.getElementById('address-field').focus();
-                    return;
-                }
-                if (!checkMinOrder()) return;
-            }
-
-            const btn = document.getElementById('card-pay-btn');
-            btn.disabled = true;
-            btn.textContent = 'Wird vorbereitet…';
-
-            const orderId = 'BYT' + Math.random().toString(36).substr(2, 5).toUpperCase();
-            sumupOrderId  = orderId;
-            const totals  = recalculateOrder();
-            const distKm  = parseFloat(document.getElementById('items-field')?.dataset.distanceKm) || 0;
-            const etaMins = distKm > 0 ? Math.round(10 + (distKm / 25) * 60) : 0;
-
-            // Stash order data — used after widget confirms payment
-            sessionStorage.setItem('byteOrderType', orderType || 'pickup');
-            sessionStorage.setItem('byteOrderId',   orderId);
-            sessionStorage.setItem('byteCardOrder', JSON.stringify({
-                orderId, orderType: orderType || 'pickup',
-                name:    form.querySelector('[name="name"]')?.value || '',
-                phone:   form.querySelector('[name="phone"]')?.value || '',
-                address: document.getElementById('address-field')?.value || '',
-                items:   document.getElementById('items-field')?.value || '',
-                notes:   form.querySelector('[name="notes"]')?.value || '',
-                total:   totals.gross_total,
-                distance_km: distKm, eta_minutes: etaMins
-            }));
-
-            try {
-                const r = await fetch('https://byte-production-4ab2.up.railway.app/api/create-payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        order_id:    orderId,
-                        amount:      totals.gross_total,
-                        description: 'BYTE Burgers Order ' + orderId,
-                        return_url:  location.origin + '/thanks.html?oid=' + orderId +
-                                     '&type=' + (orderType || 'pickup').toLowerCase() + '&card=1'
-                    })
-                });
-                const data = await r.json();
-                if (!data.ok || !data.checkout_id) throw new Error(data.reason || 'Payment setup failed');
-
-                // Hide the button, show the widget container
-                btn.style.display = 'none';
-                document.getElementById('sumup-widget-container').style.display = 'block';
-
-                // Load SumUp SDK and mount the card widget
-                await loadScript('https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js');
-                SumUpCard.mount({
-                    id:         'sumup-card',
-                    checkoutId: data.checkout_id,
-                    onResponse(type, body) {
-                        if (type === 'success') {
-                            onCardPaymentSuccess();
-                        } else if (type === 'error' || type === 'fail') {
-                            btn.style.display = '';
-                            btn.disabled = false;
-                            btn.textContent = '💳 Jetzt online mit Karte bezahlen';
-                            document.getElementById('sumup-widget-container').style.display = 'none';
-                            alert('Zahlung fehlgeschlagen. Bitte erneut versuchen.');
-                        }
-                    }
-                });
-
-            } catch (err) {
-                btn.disabled = false;
-                btn.style.display = '';
-                btn.textContent = '💳 Jetzt online mit Karte bezahlen';
-                document.getElementById('sumup-widget-container').style.display = 'none';
-                alert('Kartenzahlung nicht verfügbar: ' + err.message + '\nBitte bar bezahlen.');
-            }
-        }
-
-        function loadScript(src) {
-            return new Promise((resolve, reject) => {
-                if (document.querySelector('script[src="' + src + '"]')) { resolve(); return; }
-                const s = document.createElement('script');
-                s.src = src; s.onload = resolve; s.onerror = reject;
-                document.head.appendChild(s);
-            });
-        }
-
-        async function onCardPaymentSuccess() {
-            const orderRaw = sessionStorage.getItem('byteCardOrder');
-            if (!orderRaw) {
-                window.location.href = 'thanks.html?card=1';
-                return;
-            }
-            const order = JSON.parse(orderRaw);
-            sessionStorage.removeItem('byteCardOrder');
-
-            // Save order to Firebase immediately (payment confirmed by widget)
-            try {
-                await db.ref('orders/' + order.orderId).set({
-                    status: 'confirmed', created_at: Date.now(),
-                    type:    order.orderType,
-                    name:    order.name,    phone:   order.phone,
-                    address: order.address, items:   order.items,
-                    notes:   order.notes,
-                    payment: 'CARD: Paid online via SumUp ✓',
-                    total:   order.total,
-                    distance_km: order.distance_km, eta_minutes: order.eta_minutes,
-                    tse_signed: false, tse_tx_id: '', tse_tx_number: 0,
-                    tse_serial: '', tse_signature: '', tse_qr_data: ''
-                });
-            } catch(e) { console.warn('Firebase save error:', e); }
-
-            // Email notification
-            fetch('https://formsubmit.co/' + CONFIG.formsubmitEmail, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({
-                    Order_ID: '#' + order.orderId, Name: order.name,
-                    Phone: order.phone, Items: order.items, Address: order.address,
-                    Payment: 'CARD — Paid online via SumUp',
-                    Total: '€' + Number(order.total).toFixed(2)
-                }), keepalive: true
-            }).catch(() => {});
-
-            window.location.href = 'thanks.html?oid=' + order.orderId +
-                                   '&type=' + order.orderType.toLowerCase() + '&v=' + Date.now();
         }
 
         function setCashAmount(val) { processCashPayment(val); }
@@ -576,30 +376,26 @@
         function processCashPayment(inputVal) {
             const form        = document.getElementById('checkout-form');
             const hiddenField = document.getElementById('payment-field');
-            const orderType   = document.getElementById('order-type-field').value;
 
-            if (orderType === 'delivery' || orderType === 'DELIVERY') {
-                const addr = document.getElementById('address-field').value.trim();
-                if (addr.length < 5) {
-                    closeCashModal();
-                    alert('Please enter your delivery address before confirming!');
-                    document.getElementById('address-field').focus();
-                    return;
-                }
-                if (inputVal === 'Exact Change') {
-                    hiddenField.value = "CASH: Exact Change provided.";
-                } else {
-                    const { gross_total } = recalculateOrder();
-                    const change = parseFloat(inputVal) - gross_total;
-                    if (change < 0) return alert(`That is not enough to cover the €${gross_total.toFixed(2)} bill!`);
-                    hiddenField.value = `CASH: Paying with €${parseFloat(inputVal).toFixed(2)} (Driver must bring €${change.toFixed(2)} change)`;
-                }
-            } else {
-                // Pickup — cash at store
-                hiddenField.value = 'CASH: Pickup — Customer pays at store.';
+            const addr = document.getElementById('address-field').value.trim();
+            if (addr.length < 5) {
+                closeCashModal();
+                alert('Please enter your delivery address before confirming!');
+                document.getElementById('address-field').focus();
+                return;
             }
 
-            form.dataset.cashConfirmed = 'true';
+            if (inputVal === 'Exact Change') {
+                hiddenField.value = "CASH: Exact Change provided.";
+            } else {
+                const { gross_total } = recalculateOrder();
+                const change = parseFloat(inputVal) - gross_total;
+                if (change < 0) return alert(`That is not enough to cover the €${gross_total.toFixed(2)} bill!`);
+                hiddenField.value = `CASH: Paying with €${parseFloat(inputVal).toFixed(2)} (Driver must bring €${change.toFixed(2)} change)`;
+            }
+
+            form.dataset.cashConfirmed = "true";
+            sessionStorage.setItem('byteOrderType', 'delivery');
             closeCashModal();
             showUpsell();
         }
