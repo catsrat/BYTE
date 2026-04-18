@@ -69,9 +69,7 @@
             text-align: center;
             padding-top: 260px;
             padding-bottom: 60px;
-            background-image: linear-gradient(to bottom, rgba(9, 7, 5, 0.7), rgba(9, 7, 5, 1)), url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');
-            background-size: cover;
-            background-position: center;
+            background: linear-gradient(to bottom, rgba(9,7,5,0.55), rgba(9,7,5,1));
             margin-top: -95px;
             /* Offset for fixed header */
         }
@@ -203,7 +201,7 @@
     </header>
     <main>
         <section class="hero gs_reveal">
-            <canvas id="burger-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;opacity:0.55;"></canvas>
+            <canvas id="burger-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;opacity:0.85;"></canvas>
             <div class="hero-content">
                 <h1 class="text-gradient">Smashen<br />Schmelzen<br />Beißen</h1>
                 <p>Premium-Burger frisch vorbereitet.Einzigartiger Genuss.</p>
@@ -360,7 +358,7 @@
 
       const scene  = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
-      camera.position.set(0, 0.5, 4);
+      camera.position.set(0, 0.2, 2.8);
 
       scene.add(new THREE.AmbientLight(0xffffff, 1.2));
       const dir = new THREE.DirectionalLight(0xff8800, 2);
@@ -383,7 +381,7 @@
         const model = gltf.scene;
         const box   = new THREE.Box3().setFromObject(model);
         const size  = box.getSize(new THREE.Vector3());
-        const scale = 2.2 / Math.max(size.x, size.y, size.z);
+        const scale = 3.5 / Math.max(size.x, size.y, size.z);
         model.scale.setScalar(scale);
         const center = box.getCenter(new THREE.Vector3());
         model.position.sub(center.multiplyScalar(scale));
