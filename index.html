@@ -364,11 +364,11 @@
       const camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
       camera.position.set(0, 0, 10);
 
-      scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-      const dir = new THREE.DirectionalLight(0xff8800, 3);
+      scene.add(new THREE.AmbientLight(0xffffff, 4));
+      const dir = new THREE.DirectionalLight(0xffffff, 5);
       dir.position.set(5, 8, 5);
       scene.add(dir);
-      const fill = new THREE.DirectionalLight(0xffffff, 1);
+      const fill = new THREE.DirectionalLight(0xffffff, 3);
       fill.position.set(-5, 3, -3);
       scene.add(fill);
 
@@ -397,7 +397,7 @@
       new GLTFLoader().load('burger-3d/source/burger_new.glb', gltf => {
         const box  = new THREE.Box3().setFromObject(gltf.scene);
         const size = box.getSize(new THREE.Vector3());
-        const s    = 1.2 / Math.max(size.x, size.y, size.z);
+        const s    = 2.2 / Math.max(size.x, size.y, size.z);
 
         for (let i = 0; i < COUNT; i++) {
           const model = gltf.scene.clone(true);
