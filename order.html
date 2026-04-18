@@ -466,15 +466,18 @@
             sessionStorage.setItem('byteCardOrder',  JSON.stringify(orderData));
 
             try {
+                // redirect_url = where SumUp sends the customer after payment
+                // includes oid so thanks.html can look up the payment status by order ID
                 const returnUrl = location.origin + '/thanks.html?oid=' + orderId +
-                                  '&type=' + (orderType || 'pickup').toLowerCase() + '&v=' + Date.now();
+                                  '&type=' + (orderType || 'pickup').toLowerCase() +
+                                  '&card=1&v=' + Date.now();
 
                 const r = await fetch('https://byte-production-4ab2.up.railway.app/api/create-payment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        order_id:   orderId,
-                        amount:     totals.gross_total,
+                        order_id:    orderId,
+                        amount:      totals.gross_total,
                         description: 'BYTE Burgers Order ' + orderId,
                         return_url:  returnUrl
                     })
@@ -483,10 +486,8 @@
 
                 if (!data.ok || !data.payment_url) throw new Error(data.reason || 'Payment setup failed');
 
-                // Redirect to SumUp payment page
-                // thanks.html will read sumup_id from URL after payment and verify
-                const payUrl = data.payment_url + '?return_url=' + encodeURIComponent(returnUrl + '&sumup_id=' + data.checkout_id);
-                window.location.href = payUrl;
+                // Redirect straight to SumUp — no extra query params on their URL
+                window.location.href = data.payment_url;
 
             } catch (err) {
                 btn.disabled = false;

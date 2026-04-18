@@ -346,22 +346,28 @@ app.post('/api/create-payment', async (req, res) => {
     }
 });
 
-// ── API: Verify SumUp payment ─────────────────────────────────────────────────
-app.get('/api/verify-payment/:checkoutId', async (req, res) => {
-    const { checkoutId } = req.params;
+// ── API: Verify SumUp payment by order ID ────────────────────────────────────
+// SumUp redirect_url doesn't let us inject the checkout ID dynamically,
+// so we look up the checkout using our order_id as the checkout_reference.
+app.get('/api/payment-status/:orderId', async (req, res) => {
+    const { orderId } = req.params;
 
     try {
-        const r = await sumupReq('GET', `/v0.1/checkouts/${checkoutId}`, null);
+        // List checkouts filtered by our order reference
+        const r = await sumupReq('GET', `/v0.1/checkouts?checkout_reference=${encodeURIComponent(orderId)}`, null);
+        const list = Array.isArray(r.body) ? r.body : [];
+        const checkout = list.find(c => c.checkout_reference === orderId);
+
+        if (!checkout) return res.json({ ok: false, paid: false, reason: 'Checkout not found' });
 
         return res.json({
-            ok:       true,
-            paid:     r.body.status === 'PAID',
-            status:   r.body.status,
-            amount:   r.body.amount,
-            currency: r.body.currency
+            ok:     true,
+            paid:   checkout.status === 'PAID',
+            status: checkout.status,
+            amount: checkout.amount
         });
     } catch (err) {
-        console.error('SumUp verify payment error:', err.message);
+        console.error('SumUp verify error:', err.message);
         return res.json({ ok: false, reason: err.message });
     }
 });

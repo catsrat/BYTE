@@ -347,15 +347,16 @@
     const STORE = { lat: CONFIG.coords.lat, lng: CONFIG.coords.lng };
 
     // ── SumUp card payment verification ──────────────────────────────────────
-    // When SumUp redirects back, it appends sumup_id to the return_url.
-    // We verify the payment then save the order to Firebase.
+    // SumUp redirects back to thanks.html?oid=ORDER_ID&card=1
+    // We verify by looking up the checkout using our order ID as the reference.
     (async function verifySumUpPayment() {
-        const p         = new URLSearchParams(window.location.search);
-        const sumupId   = p.get('sumup_id');
-        if (!sumupId) return;  // cash order — skip
+        const p      = new URLSearchParams(window.location.search);
+        const isCard = p.get('card') === '1';
+        const oid    = p.get('oid');
+        if (!isCard || !oid) return;  // cash order — skip
 
         try {
-            const r    = await fetch('https://byte-production-4ab2.up.railway.app/api/verify-payment/' + sumupId);
+            const r    = await fetch('https://byte-production-4ab2.up.railway.app/api/payment-status/' + oid);
             const data = await r.json();
 
             const orderRaw  = sessionStorage.getItem('byteCardOrder');
@@ -384,7 +385,6 @@
                 total:        order.total,
                 distance_km:  order.distance_km,
                 eta_minutes:  order.eta_minutes,
-                sumup_id:     sumupId,
                 tse_signed:   false,
                 tse_tx_id:    '', tse_tx_number: 0,
                 tse_serial:   '', tse_signature:  '', tse_qr_data: ''
