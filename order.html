@@ -101,7 +101,7 @@
 <div class="modal-content">
 <h2 class="modal-title text-gradient">Zahlung</h2>
 
-<!-- Card payment option -->
+<!-- Card payment option (always shown) -->
 <button class="btn" id="card-pay-btn" onclick="payByCard()" type="button"
     style="width:100%;margin-bottom:1.25rem;background:var(--primary);font-size:1rem;display:flex;align-items:center;justify-content:center;gap:.6rem;">
     💳 Jetzt online mit Karte bezahlen
@@ -112,20 +112,32 @@
     <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(255,255,255,0.1);z-index:0;"></div>
 </div>
 
-<p style="text-align:center;margin-bottom:1rem;color:var(--text-muted);font-size:.9rem;">Mit welchem Bargeld zahlen Sie?</p>
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-<button class="btn" onclick="setCashAmount('Exact Change')" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);" type="button">Genaue Änderung</button>
-<button class="btn" onclick="setCashAmount(50)" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);" type="button">Bezahlen mit 50 €</button>
-<button class="btn" onclick="setCashAmount(100)" style="background: transparent; border: 1px solid var(--primary); color: var(--primary); grid-column: span 2;" type="button">Bezahlen mit 100 €</button>
+<!-- Pickup: simple "pay at store" button -->
+<div id="cash-pickup-section" style="display:none;">
+    <button class="btn" onclick="processCashPayment('store')" type="button"
+        style="width:100%;background:transparent;border:1px solid var(--primary);color:var(--primary);">
+        💵 Bar an der Abholung bezahlen
+    </button>
 </div>
-<div class="form-group full-width" style="margin-bottom: 0;">
-<label class="form-label">Oder geben Sie einen benutzerdefinierten Betrag ein:</label>
-<div style="display: flex; gap: 1rem;">
-<input class="form-input" id="custom-cash-input" placeholder="z.B. 20" style="flex: 1;" type="number"/>
-<button class="btn" onclick="submitCustomCash()" style="padding: 0 1.5rem;" type="button">Bestätigen</button>
+
+<!-- Delivery: denomination buttons -->
+<div id="cash-delivery-section" style="display:none;">
+    <p style="text-align:center;margin-bottom:1rem;color:var(--text-muted);font-size:.9rem;">Mit welchem Bargeld zahlen Sie?</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+        <button class="btn" onclick="setCashAmount('Exact Change')" style="background:transparent;border:1px solid var(--primary);color:var(--primary);" type="button">Genaue Änderung</button>
+        <button class="btn" onclick="setCashAmount(50)"  style="background:transparent;border:1px solid var(--primary);color:var(--primary);" type="button">Bezahlen mit 50 €</button>
+        <button class="btn" onclick="setCashAmount(100)" style="background:transparent;border:1px solid var(--primary);color:var(--primary);grid-column:span 2;" type="button">Bezahlen mit 100 €</button>
+    </div>
+    <div class="form-group full-width" style="margin-bottom:0;">
+        <label class="form-label">Oder geben Sie einen benutzerdefinierten Betrag ein:</label>
+        <div style="display:flex;gap:1rem;">
+            <input class="form-input" id="custom-cash-input" placeholder="z.B. 20" style="flex:1;" type="number"/>
+            <button class="btn" onclick="submitCustomCash()" style="padding:0 1.5rem;" type="button">Bestätigen</button>
+        </div>
+    </div>
 </div>
-</div>
-<button class="btn" onclick="closeCashModal()" style="width: 100%; margin-top: 1.5rem; background: var(--bg-dark);" type="button">Zurück</button>
+
+<button class="btn" onclick="closeCashModal()" style="width:100%;margin-top:1.5rem;background:var(--bg-dark);" type="button">Zurück</button>
 </div>
 </div>
 <script src="js/config.js"></script>
@@ -288,10 +300,10 @@
                 }
                 if (orderType === 'pickup') {
                     sessionStorage.setItem('byteOrderType', 'pickup');
-                    document.getElementById('cash-modal').classList.add('active');
+                    openPaymentModal('pickup');
                 } else {
                     if (!checkMinOrder()) return;
-                    document.getElementById('cash-modal').classList.add('active');
+                    openPaymentModal('delivery');
                 }
             });
         });
@@ -398,6 +410,12 @@
         }
 
         function closeFulfillmentModal() {}  // kept for safety, no longer used
+
+        function openPaymentModal(type) {
+            document.getElementById('cash-pickup-section').style.display   = type === 'pickup'   ? '' : 'none';
+            document.getElementById('cash-delivery-section').style.display = type === 'delivery' ? '' : 'none';
+            document.getElementById('cash-modal').classList.add('active');
+        }
 
         function closeCashModal() {
             document.getElementById('cash-modal').classList.remove('active');
