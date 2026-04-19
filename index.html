@@ -199,8 +199,8 @@
             <a class="btn" href="menu.html">Jetzt bestellen</a>
         </nav>
     </header>
-    <canvas id="burger-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.85;"></canvas>
-    <main style="position:relative;z-index:1;">
+    <canvas id="burger-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;opacity:0.85;"></canvas>
+    <main>
         <section class="hero gs_reveal">
             <div class="hero-content">
                 <h1 class="text-gradient">Smashen<br />Schmelzen<br />Beißen</h1>
@@ -354,6 +354,7 @@
     <script type="module">
       import * as THREE from 'three';
       import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+      import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
       const canvas   = document.getElementById('burger-canvas');
       const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
@@ -394,7 +395,12 @@
         b.rotZ    = randBetween(-0.003, 0.003);
       }
 
-      new GLTFLoader().load('burger-3d/source/burger_new.glb', gltf => {
+      const draco = new DRACOLoader();
+      draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+      const loader = new GLTFLoader();
+      loader.setDRACOLoader(draco);
+
+      loader.load('burger-3d/source/burger_opt.glb', gltf => {
         const box  = new THREE.Box3().setFromObject(gltf.scene);
         const size = box.getSize(new THREE.Vector3());
         const s    = 0.9 / Math.max(size.x, size.y, size.z);
