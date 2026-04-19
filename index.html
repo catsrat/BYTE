@@ -405,7 +405,7 @@
       loader.load('burger-3d/source/burger_opt.glb', gltf => {
         const box  = new THREE.Box3().setFromObject(gltf.scene);
         const size = box.getSize(new THREE.Vector3());
-        const s    = 0.9 / Math.max(size.x, size.y, size.z);
+        const s    = 1.4 / Math.max(size.x, size.y, size.z);
 
         for (let i = 0; i < COUNT; i++) {
           const model = gltf.scene.clone(true);
