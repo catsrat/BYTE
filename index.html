@@ -392,10 +392,11 @@
 
       function resetBurger(b) {
         b.group.position.set(randBetween(-8, 8), randBetween(8, 14), randBetween(-3, 1));
-        b.speed   = randBetween(0.012, 0.025);
-        b.rotX    = randBetween(-0.005, 0.005);
-        b.rotY    = randBetween(0.005, 0.015);
-        b.rotZ    = randBetween(-0.003, 0.003);
+        b.speed   = randBetween(0.04, 0.07);
+        b.driftX  = randBetween(-0.004, 0.004);
+        b.rotX    = randBetween(-0.008, 0.008);
+        b.rotY    = randBetween(0.01, 0.025);
+        b.rotZ    = randBetween(-0.006, 0.006);
       }
 
       const draco = new DRACOLoader();
@@ -429,6 +430,7 @@
           requestAnimationFrame(animate);
           burgers.forEach(b => {
             b.group.position.y -= b.speed;
+            b.group.position.x += b.driftX;
             b.group.rotation.x += b.rotX;
             b.group.rotation.y += b.rotY;
             b.group.rotation.z += b.rotZ;
