@@ -384,9 +384,6 @@
       resize();
       window.addEventListener('resize', resize);
 
-      // Link scene to scroll so burgers fall through page, not viewport
-      let scrollY = 0;
-      window.addEventListener('scroll', () => { scrollY = window.scrollY; }, { passive: true });
 
       const COUNT = 10;
       const burgers = [];
@@ -428,18 +425,14 @@
           burgers.push(b);
         }
 
-        const scrollScale = 11.5 / window.innerHeight;
-
         (function animate() {
           requestAnimationFrame(animate);
-          // Offset scene by scroll so burgers feel part of page
-          scene.position.y = scrollY * scrollScale;
           burgers.forEach(b => {
             b.group.position.y -= b.speed;
             b.group.rotation.x += b.rotX;
             b.group.rotation.y += b.rotY;
             b.group.rotation.z += b.rotZ;
-            if (b.group.position.y < -8 + scrollY * scrollScale) resetBurger(b);
+            if (b.group.position.y < -8) resetBurger(b);
           });
           renderer.render(scene, camera);
         })();
