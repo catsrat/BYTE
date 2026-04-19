@@ -436,10 +436,11 @@ nav {
 
 /* Footer */
 footer {
-  background: var(--bg-card);
+  background: #090705;
   padding: 4rem 0 2rem;
   margin-top: 4rem;
   position: relative;
+  z-index: 4;
   overflow: hidden;
 }
 
