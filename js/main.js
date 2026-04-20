@@ -809,22 +809,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const tripleHTML = `
             <div class="combo-modal" id="triple-combo-modal" style="z-index:10001;">
                 <div class="modal-content" style="max-width:560px;">
-                    <h2 class="modal-title">👨‍👩‍👦 Triple Byte Kombo — €25.00</h2>
-                    <p style="color:var(--text-muted);margin-bottom:1.5rem;font-size:0.95rem;">3 Burger + 3 Milchshakes + 3× Classic Fries</p>
+                    <h2 class="modal-title">👨‍👩‍👦 Triple Byte Kombo</h2>
+                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.75rem;background:rgba(255,127,0,0.1);border:1px solid var(--primary);border-radius:10px;padding:0.75rem 1rem;">
+                        <span style="font-size:1.5rem;">🍔🥤🍟</span>
+                        <span style="color:#fff;font-size:0.95rem;">3 Smash-Patties + 3 Milchshakes + 3× Classic Fries</span>
+                        <span style="margin-left:auto;color:var(--primary);font-weight:900;font-size:1.1rem;">€25.00</span>
+                    </div>
                     ${[1,2,3].map(i => `
-                    <div style="border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1rem;margin-bottom:1rem;">
-                        <p style="color:#fff;font-weight:700;margin-bottom:0.75rem;">Person ${i}</p>
-                        <div class="select-group" style="margin-bottom:0.75rem;">
-                            <label class="select-label">Burger</label>
+                    <div style="border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:1.25rem 1.25rem 1rem;margin-bottom:1.1rem;background:rgba(255,255,255,0.03);">
+                        <p style="color:var(--primary);font-weight:800;font-size:0.85rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem;">Person ${i}</p>
+                        <div style="margin-bottom:1rem;">
+                            <label style="display:block;color:rgba(255,255,255,0.6);font-size:0.8rem;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">Smash-Patty wählen</label>
                             <select id="triple-burger-${i}" class="select-input"></select>
                         </div>
-                        <div class="select-group" style="margin-bottom:0.5rem;">
-                            <label class="select-label">Milchshake</label>
+                        <div style="margin-bottom:0.9rem;">
+                            <label style="display:block;color:rgba(255,255,255,0.6);font-size:0.8rem;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">Milchshake wählen</label>
                             <select id="triple-shake-${i}" class="select-input"></select>
                         </div>
-                        <p style="color:var(--text-muted);font-size:0.85rem;">🍟 Classic Fries — inklusive</p>
+                        <div style="display:flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.05);border-radius:8px;padding:0.5rem 0.75rem;">
+                            <span>🍟</span>
+                            <span style="color:var(--text-muted);font-size:0.85rem;">Classic Fries — inklusive</span>
+                            <span style="margin-left:auto;color:#4caf50;font-size:0.8rem;font-weight:700;">✓ Gratis</span>
+                        </div>
                     </div>`).join('')}
-                    <div style="display:flex;gap:1rem;margin-top:1.5rem;">
+                    <div style="display:flex;gap:1rem;margin-top:1.75rem;">
                         <button class="btn btn-outline" style="flex:1" onclick="closeTripleComboModal()">Abbrechen</button>
                         <button class="btn" id="confirm-triple-btn" style="flex:1" onclick="confirmTripleCombo()">Zum Warenkorb hinzufügen</button>
                     </div>
