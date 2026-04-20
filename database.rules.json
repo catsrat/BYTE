@@ -8,16 +8,24 @@
       ".read": "auth != null && auth.token.email != null"
     },
     "settings": {
-      ".read": "auth != null && auth.token.email != null",
-      ".write": "auth != null && auth.token.email != null",
-      "minOrder":  { ".read": true },
-      "prepTime":  { ".read": true },
-      "combos":    { ".read": true },
-      "adminPin":  { ".read": false, ".write": false }
+      ".read": true,
+      ".write": "auth != null && auth.token.email != null"
     },
     "menu": {
       ".read": true,
       ".write": "auth != null && auth.token.email != null"
+    },
+    "discountCodes": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email != null",
+      "$code": {
+        "usedBy": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid && !data.exists()"
+          }
+        }
+      }
     }
   }
 }
