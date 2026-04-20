@@ -123,6 +123,7 @@ let activeDiscount = null;       // { code, percent, phone } once verified
 let pendingDiscountData = null;  // { code, percent } waiting for OTP
 let recaptchaVerifier = null;
 let confirmationResult = null;
+let verifyContext = 'discount';  // 'discount' or 'checkout'
 
 function saveCart() {
     localStorage.setItem('byteCart', JSON.stringify(cart));
@@ -209,7 +210,8 @@ function removeDiscount() {
     updateBasketUI();
 }
 
-function openPhoneVerifyModal() {
+function openPhoneVerifyModal(context) {
+    verifyContext = context || 'discount';
     const modal = document.getElementById('phone-verify-modal');
     if (!modal) return;
     document.getElementById('phone-step-1').style.display = '';
@@ -217,6 +219,17 @@ function openPhoneVerifyModal() {
     document.getElementById('verify-phone-input').value = '';
     document.getElementById('phone-verify-error').textContent = '';
     document.getElementById('otp-verify-error').textContent  = '';
+
+    // Update modal text based on context
+    const title = modal.querySelector('.modal-title');
+    const desc  = modal.querySelector('#phone-modal-desc');
+    if (verifyContext === 'checkout') {
+        if (title) title.textContent = '📱 Bestellung bestätigen';
+        if (desc)  desc.textContent  = 'Bitte verifizieren Sie Ihre Nummer — wir brauchen sie für Ihre Bestellung.';
+    } else {
+        if (title) title.textContent = '📱 Nummer verifizieren';
+        if (desc)  desc.textContent  = 'Einmalige Verifizierung — so stellen wir sicher, dass der Rabatt fair bleibt.';
+    }
     modal.classList.add('active');
 
     // Reset and render reCAPTCHA after modal is fully visible
@@ -304,8 +317,19 @@ async function verifyOTPAndApplyDiscount() {
         const result = await confirmationResult.confirm(otp);
         const uid    = result.user.uid;
         const phone  = result.user.phoneNumber;
-        const code   = pendingDiscountData.code;
 
+        // Always store verified phone for this session
+        sessionStorage.setItem('byteVerifiedPhone', phone);
+
+        if (verifyContext === 'checkout') {
+            // Checkout flow — just verified, now proceed
+            closePhoneVerifyModal();
+            checkout();
+            return;
+        }
+
+        // Discount flow — check if phone already used this code
+        const code    = pendingDiscountData.code;
         const db      = firebase.database();
         const usedRef = db.ref('discountCodes/' + code + '/usedBy/' + uid);
         const used    = await usedRef.once('value');
@@ -735,6 +759,13 @@ function checkout() {
         return;
     }
 
+    // Require phone verification before checkout
+    const verifiedPhone = sessionStorage.getItem('byteVerifiedPhone');
+    if (!verifiedPhone) {
+        openPhoneVerifyModal('checkout');
+        return;
+    }
+
     const db = window._menuDb;
     if (db) {
         db.ref('settings').once('value', snap => {
@@ -816,6 +847,9 @@ function doCheckout() {
 
     // STEP 5: Store full cart snapshot for order.html (single source of truth)
     localStorage.setItem('byteOrderCart', JSON.stringify(orderItems));
+    // Pass verified phone to order.html for pre-fill
+    const vPhone = sessionStorage.getItem('byteVerifiedPhone');
+    if (vPhone) sessionStorage.setItem('byteOrderPhone', vPhone);
 
     // STEP 6: Apply discount if active
     let discountLine = '';
@@ -1042,7 +1076,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="modal-content" style="max-width:420px;">
                     <div id="phone-step-1">
                         <h2 class="modal-title">📱 Nummer verifizieren</h2>
-                        <p style="color:var(--text-muted);margin-bottom:1.25rem;font-size:0.95rem;">Einmalige Verifizierung — so stellen wir sicher, dass der Rabatt fair bleibt.</p>
+                        <p id="phone-modal-desc" style="color:var(--text-muted);margin-bottom:1.25rem;font-size:0.95rem;">Einmalige Verifizierung — so stellen wir sicher, dass der Rabatt fair bleibt.</p>
                         <div class="select-group">
                             <label class="select-label">Ihre Handynummer</label>
                             <input id="verify-phone-input" type="tel" placeholder="z.B. 0176 12345678" class="select-input" style="letter-spacing:1px;" />
