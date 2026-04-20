@@ -216,6 +216,12 @@ function openPhoneVerifyModal() {
     document.getElementById('phone-verify-error').textContent = '';
     document.getElementById('otp-verify-error').textContent  = '';
     modal.classList.add('active');
+
+    // Reset and render reCAPTCHA fresh each time
+    if (recaptchaVerifier) { try { recaptchaVerifier.clear(); } catch(e) {} recaptchaVerifier = null; }
+    document.getElementById('recaptcha-container').innerHTML = '';
+    recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'normal' });
+    recaptchaVerifier.render();
 }
 
 function closePhoneVerifyModal() {
@@ -239,9 +245,6 @@ async function sendOTP() {
     errorEl.textContent = '';
 
     try {
-        if (!recaptchaVerifier) {
-            recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
-        }
         confirmationResult = await firebase.auth().signInWithPhoneNumber(phone, recaptchaVerifier);
         document.getElementById('otp-sent-to').textContent = 'Code gesendet an ' + phone;
         document.getElementById('phone-step-1').style.display = 'none';
@@ -249,7 +252,7 @@ async function sendOTP() {
         document.getElementById('verify-otp-input').value = '';
     } catch(e) {
         errorEl.textContent = 'Fehler beim Senden — bitte Nummer prüfen.';
-        if (recaptchaVerifier) { recaptchaVerifier.clear(); recaptchaVerifier = null; }
+        if (recaptchaVerifier) { try { recaptchaVerifier.clear(); } catch(e2) {} recaptchaVerifier = null; }
     } finally {
         sendBtn.textContent = 'Code senden';
         sendBtn.disabled = false;
@@ -1015,6 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <label class="select-label">Ihre Handynummer</label>
                             <input id="verify-phone-input" type="tel" placeholder="z.B. 0176 12345678" class="select-input" style="letter-spacing:1px;" />
                         </div>
+                        <div id="recaptcha-container" style="margin:0.75rem 0;display:flex;justify-content:center;"></div>
                         <div id="phone-verify-error" style="color:#f44336;font-size:0.83rem;min-height:1.2em;margin:0.4rem 0;"></div>
                         <div style="display:flex;gap:0.75rem;margin-top:1rem;">
                             <button class="btn btn-outline" style="flex:1" onclick="closePhoneVerifyModal()">Abbrechen</button>
