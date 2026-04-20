@@ -189,6 +189,8 @@ async function applyDiscountCode() {
         }
         pendingDiscountData = { code, percent: data.discount };
         status.textContent = '';
+        // Pre-init reCAPTCHA before modal opens so it renders instantly
+        if (recaptchaVerifier) { try { recaptchaVerifier.clear(); } catch(e) {} recaptchaVerifier = null; }
         openPhoneVerifyModal();
     } catch(e) {
         status.textContent = '❌ Fehler beim Prüfen';
@@ -227,7 +229,7 @@ function openPhoneVerifyModal() {
         } catch(e) {
             console.error('reCAPTCHA init error:', e);
         }
-    }, 400);
+    }, 100);
 }
 
 function closePhoneVerifyModal() {
