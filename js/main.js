@@ -180,11 +180,21 @@ function closeTripleComboModal() {
     document.getElementById('triple-combo-modal').classList.remove('active');
 }
 
+function updateShakeSelection(personIndex) {
+    const modal = document.getElementById('triple-combo-modal');
+    const selected = modal.querySelector(`input[name="shake-${personIndex}"]:checked`);
+    modal.querySelectorAll(`.shake-btn-${personIndex}`).forEach(el => {
+        const isActive = el.dataset.val === selected.value;
+        el.style.background = isActive ? 'rgba(255,127,0,0.25)' : 'transparent';
+        el.style.borderColor = isActive ? 'var(--primary)' : 'rgba(255,255,255,0.15)';
+    });
+}
+
 function confirmTripleCombo() {
     const modal = document.getElementById('triple-combo-modal');
     const persons = [1,2,3].map(i => ({
         burger: modal.querySelector(`#triple-burger-${i}`).value,
-        shake:  modal.querySelector(`#triple-shake-${i}`).value,
+        shake:  (modal.querySelector(`input[name="shake-${i}"]:checked`) || {}).value || 'Schokoladen-Milchshake',
     }));
 
     const totalPrice = 25.00;
@@ -806,37 +816,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Triple Byte Kombo Modal
     if (!document.getElementById('triple-combo-modal')) {
+        const shakes = [
+            { value: 'Schokoladen-Milchshake', icon: '🍫', label: 'Schoko' },
+            { value: 'Vanille-Milchshake',     icon: '🍦', label: 'Vanille' },
+            { value: 'Erdbeer-Milchshake',     icon: '🍓', label: 'Erdbeer' },
+        ];
         const tripleHTML = `
             <div class="combo-modal" id="triple-combo-modal" style="z-index:10001;">
-                <div class="modal-content" style="max-width:560px;">
-                    <h2 class="modal-title">👨‍👩‍👦 Triple Byte Kombo</h2>
-                    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.75rem;background:rgba(255,127,0,0.1);border:1px solid var(--primary);border-radius:10px;padding:0.75rem 1rem;">
-                        <span style="font-size:1.5rem;">🍔🥤🍟</span>
-                        <span style="color:#fff;font-size:0.95rem;">3 Smash-Patties + 3 Milchshakes + 3× Classic Fries</span>
-                        <span style="margin-left:auto;color:var(--primary);font-weight:900;font-size:1.1rem;">€25.00</span>
+                <div class="modal-content" style="max-width:680px;padding:2rem;">
+                    <div style="text-align:center;margin-bottom:1.5rem;">
+                        <h2 style="font-size:1.6rem;font-weight:900;color:#fff;margin:0 0 0.25rem;">Triple Byte Kombo</h2>
+                        <p style="color:var(--text-muted);font-size:0.9rem;margin:0;">3 Smash-Patties · 3 Milchshakes · 3× Classic Fries</p>
+                        <div style="display:inline-block;background:var(--primary);color:#000;font-weight:900;font-size:1.3rem;padding:0.3rem 1.2rem;border-radius:50px;margin-top:0.75rem;">€25.00</div>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.5rem;">
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
                     ${[1,2,3].map(i => `
-                        <div style="border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:1rem;background:rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:0.85rem;">
-                            <p style="color:var(--primary);font-weight:800;font-size:0.85rem;letter-spacing:1px;text-transform:uppercase;margin:0;">Person ${i}</p>
-                            <div>
-                                <label style="display:block;color:rgba(255,255,255,0.6);font-size:0.75rem;margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.5px;">Smash-Patty</label>
-                                <select id="triple-burger-${i}" class="select-input" style="font-size:0.82rem;"></select>
+                        <div style="border:1px solid rgba(255,127,0,0.3);border-radius:16px;padding:1.25rem 1rem;background:rgba(255,127,0,0.05);display:flex;flex-direction:column;gap:1rem;">
+                            <div style="display:flex;align-items:center;gap:0.5rem;">
+                                <span style="width:26px;height:26px;background:var(--primary);color:#000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.85rem;flex-shrink:0;">${i}</span>
+                                <span style="color:#fff;font-weight:700;font-size:0.95rem;">Person ${i}</span>
                             </div>
                             <div>
-                                <label style="display:block;color:rgba(255,255,255,0.6);font-size:0.75rem;margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.5px;">Milchshake</label>
-                                <select id="triple-shake-${i}" class="select-input" style="font-size:0.82rem;"></select>
+                                <label style="display:block;color:rgba(255,255,255,0.5);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.4rem;">Burger wählen</label>
+                                <select id="triple-burger-${i}" class="select-input" style="font-size:0.85rem;padding:0.5rem 0.75rem;"></select>
                             </div>
-                            <div style="display:flex;align-items:center;gap:0.4rem;background:rgba(255,255,255,0.05);border-radius:8px;padding:0.45rem 0.6rem;margin-top:auto;">
-                                <span style="font-size:0.9rem;">🍟</span>
-                                <span style="color:var(--text-muted);font-size:0.78rem;">Classic Fries</span>
-                                <span style="margin-left:auto;color:#4caf50;font-size:0.75rem;font-weight:700;">✓</span>
+                            <div>
+                                <label style="display:block;color:rgba(255,255,255,0.5);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.5rem;">Milchshake</label>
+                                <div style="display:flex;gap:0.4rem;">
+                                    ${shakes.map(s => `
+                                    <label style="flex:1;cursor:pointer;">
+                                        <input type="radio" name="shake-${i}" value="${s.value}" ${s.label==='Schoko'?'checked':''} style="display:none;" onchange="updateShakeSelection(${i})">
+                                        <div class="shake-btn-${i} shake-opt" data-val="${s.value}" style="text-align:center;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:0.5rem 0.25rem;font-size:1.1rem;transition:all 0.2s;cursor:pointer;background:${s.label==='Schoko'?'rgba(255,127,0,0.25)':'transparent'};border-color:${s.label==='Schoko'?'var(--primary)':'rgba(255,255,255,0.15)'};">
+                                            <div>${s.icon}</div>
+                                            <div style="font-size:0.62rem;color:rgba(255,255,255,0.7);margin-top:2px;">${s.label}</div>
+                                        </div>
+                                    </label>`).join('')}
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:0.5rem;background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.3);border-radius:10px;padding:0.5rem 0.75rem;">
+                                <span>🍟</span>
+                                <span style="color:rgba(255,255,255,0.7);font-size:0.82rem;">Classic Fries</span>
+                                <span style="margin-left:auto;color:#4caf50;font-weight:700;font-size:0.8rem;">✓ Gratis</span>
                             </div>
                         </div>`).join('')}
                     </div>
-                    <div style="display:flex;gap:1rem;margin-top:1.75rem;">
+                    <div style="display:flex;gap:1rem;">
                         <button class="btn btn-outline" style="flex:1" onclick="closeTripleComboModal()">Abbrechen</button>
-                        <button class="btn" id="confirm-triple-btn" style="flex:1" onclick="confirmTripleCombo()">Zum Warenkorb hinzufügen</button>
+                        <button class="btn" id="confirm-triple-btn" style="flex:2" onclick="confirmTripleCombo()">Zum Warenkorb — €25.00</button>
                     </div>
                 </div>
             </div>`;
