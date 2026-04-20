@@ -815,23 +815,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span style="color:#fff;font-size:0.95rem;">3 Smash-Patties + 3 Milchshakes + 3× Classic Fries</span>
                         <span style="margin-left:auto;color:var(--primary);font-weight:900;font-size:1.1rem;">€25.00</span>
                     </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.5rem;">
                     ${[1,2,3].map(i => `
-                    <div style="border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:1.25rem 1.25rem 1rem;margin-bottom:1.1rem;background:rgba(255,255,255,0.03);">
-                        <p style="color:var(--primary);font-weight:800;font-size:0.85rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem;">Person ${i}</p>
-                        <div style="margin-bottom:1rem;">
-                            <label style="display:block;color:rgba(255,255,255,0.6);font-size:0.8rem;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">Smash-Patty wählen</label>
-                            <select id="triple-burger-${i}" class="select-input"></select>
-                        </div>
-                        <div style="margin-bottom:0.9rem;">
-                            <label style="display:block;color:rgba(255,255,255,0.6);font-size:0.8rem;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">Milchshake wählen</label>
-                            <select id="triple-shake-${i}" class="select-input"></select>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.05);border-radius:8px;padding:0.5rem 0.75rem;">
-                            <span>🍟</span>
-                            <span style="color:var(--text-muted);font-size:0.85rem;">Classic Fries — inklusive</span>
-                            <span style="margin-left:auto;color:#4caf50;font-size:0.8rem;font-weight:700;">✓ Gratis</span>
-                        </div>
-                    </div>`).join('')}
+                        <div style="border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:1rem;background:rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:0.85rem;">
+                            <p style="color:var(--primary);font-weight:800;font-size:0.85rem;letter-spacing:1px;text-transform:uppercase;margin:0;">Person ${i}</p>
+                            <div>
+                                <label style="display:block;color:rgba(255,255,255,0.6);font-size:0.75rem;margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.5px;">Smash-Patty</label>
+                                <select id="triple-burger-${i}" class="select-input" style="font-size:0.82rem;"></select>
+                            </div>
+                            <div>
+                                <label style="display:block;color:rgba(255,255,255,0.6);font-size:0.75rem;margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.5px;">Milchshake</label>
+                                <select id="triple-shake-${i}" class="select-input" style="font-size:0.82rem;"></select>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:0.4rem;background:rgba(255,255,255,0.05);border-radius:8px;padding:0.45rem 0.6rem;margin-top:auto;">
+                                <span style="font-size:0.9rem;">🍟</span>
+                                <span style="color:var(--text-muted);font-size:0.78rem;">Classic Fries</span>
+                                <span style="margin-left:auto;color:#4caf50;font-size:0.75rem;font-weight:700;">✓</span>
+                            </div>
+                        </div>`).join('')}
+                    </div>
                     <div style="display:flex;gap:1rem;margin-top:1.75rem;">
                         <button class="btn btn-outline" style="flex:1" onclick="closeTripleComboModal()">Abbrechen</button>
                         <button class="btn" id="confirm-triple-btn" style="flex:1" onclick="confirmTripleCombo()">Zum Warenkorb hinzufügen</button>
