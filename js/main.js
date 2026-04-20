@@ -224,7 +224,19 @@ function openPhoneVerifyModal() {
     document.getElementById('recaptcha-container').innerHTML = '';
     setTimeout(() => {
         try {
-            recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'normal' });
+            recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+                size: 'normal',
+                callback: () => {
+                    // reCAPTCHA solved — enable Send button
+                    const btn = document.getElementById('send-otp-btn');
+                    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+                },
+                'expired-callback': () => {
+                    // reCAPTCHA expired — disable button again
+                    const btn = document.getElementById('send-otp-btn');
+                    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed'; }
+                }
+            });
             recaptchaVerifier.render().catch(e => console.error('reCAPTCHA render error:', e));
         } catch(e) {
             console.error('reCAPTCHA init error:', e);
@@ -1035,11 +1047,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             <label class="select-label">Ihre Handynummer</label>
                             <input id="verify-phone-input" type="tel" placeholder="z.B. 0176 12345678" class="select-input" style="letter-spacing:1px;" />
                         </div>
-                        <div id="recaptcha-container" style="margin:0.75rem 0;display:flex;justify-content:center;"></div>
+                        <div style="color:rgba(255,255,255,0.5);font-size:0.8rem;margin:0.75rem 0 0.3rem;text-align:center;">✅ Bitte zuerst das Häkchen setzen, dann Code senden</div>
+                        <div id="recaptcha-container" style="margin:0.4rem 0 0.75rem;display:flex;justify-content:center;min-height:78px;align-items:center;">
+                            <span style="color:var(--text-muted);font-size:0.82rem;">Wird geladen…</span>
+                        </div>
                         <div id="phone-verify-error" style="color:#f44336;font-size:0.83rem;min-height:1.2em;margin:0.4rem 0;"></div>
                         <div style="display:flex;gap:0.75rem;margin-top:1rem;">
                             <button class="btn btn-outline" style="flex:1" onclick="closePhoneVerifyModal()">Abbrechen</button>
-                            <button class="btn" id="send-otp-btn" style="flex:1" onclick="sendOTP()">Code senden</button>
+                            <button class="btn" id="send-otp-btn" style="flex:1;opacity:0.4;cursor:not-allowed;" onclick="sendOTP()" disabled>Code senden</button>
                         </div>
                     </div>
                     <div id="phone-step-2" style="display:none;">
