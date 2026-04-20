@@ -217,11 +217,17 @@ function openPhoneVerifyModal() {
     document.getElementById('otp-verify-error').textContent  = '';
     modal.classList.add('active');
 
-    // Reset and render reCAPTCHA fresh each time
+    // Reset and render reCAPTCHA after modal is fully visible
     if (recaptchaVerifier) { try { recaptchaVerifier.clear(); } catch(e) {} recaptchaVerifier = null; }
     document.getElementById('recaptcha-container').innerHTML = '';
-    recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'normal' });
-    recaptchaVerifier.render();
+    setTimeout(() => {
+        try {
+            recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'normal' });
+            recaptchaVerifier.render().catch(e => console.error('reCAPTCHA render error:', e));
+        } catch(e) {
+            console.error('reCAPTCHA init error:', e);
+        }
+    }, 400);
 }
 
 function closePhoneVerifyModal() {
