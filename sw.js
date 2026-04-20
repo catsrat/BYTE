@@ -26,12 +26,15 @@ self.addEventListener('fetch', e => {
         return;
     }
 
+    // Only cache GET requests — POST and others are not cacheable
+    if (e.request.method !== 'GET') return;
+
     // Everything else (CSS, JS, images): cache first, update in background
     e.respondWith(
         caches.open(CACHE).then(cache =>
             cache.match(e.request).then(cached => {
                 const fresh = fetch(e.request).then(res => {
-                    cache.put(e.request, res.clone());
+                    if (res.ok) cache.put(e.request, res.clone());
                     return res;
                 });
                 return cached || fresh;
