@@ -165,12 +165,8 @@ function openTripleComboModal() {
     // Populate all 3 burger selects
     [1,2,3].forEach(i => {
         const sel = modal.querySelector(`#triple-burger-${i}`);
-        sel.innerHTML = menuData.burgers.map(b =>
+        if (sel) sel.innerHTML = menuData.burgers.map(b =>
             `<option value="${b.name}">${b.name} (€${b.price.toFixed(2)})</option>`
-        ).join('');
-        const shakeSel = modal.querySelector(`#triple-shake-${i}`);
-        shakeSel.innerHTML = menuData.milkshakes.map(s =>
-            `<option value="${s}">${s}</option>`
         ).join('');
     });
     modal.classList.add('active');
