@@ -143,7 +143,8 @@ const menuData = {
         regular: ['Classic Fries', 'Peri Peri Fries', 'Sweet Potato Fries', 'Crispy Onion Rings', 'Mozzarella Sticks', 'Jalapeño Poppers', 'Chicken Tenders'],
         loaded: ['Cheese Melt Fries', 'GOAT Loaded Fries', 'BBQ Beef Loaded Fries']
     },
-    drinks: ['Coca-Cola', 'Fanta', 'Sprite', 'Mineral Water']
+    drinks: ['Coca-Cola', 'Fanta', 'Sprite', 'Mineral Water'],
+    milkshakes: ['Schokoladen-Milchshake', 'Vanille-Milchshake', 'Erdbeer-Milchshake']
 };
 
 // Combo Selection Logic
@@ -157,6 +158,62 @@ const referencePrices = {
 };
 
 let currentCombo = null;
+
+function openTripleComboModal() {
+    const modal = document.getElementById('triple-combo-modal');
+    if (!modal) return;
+    // Populate all 3 burger selects
+    [1,2,3].forEach(i => {
+        const sel = modal.querySelector(`#triple-burger-${i}`);
+        sel.innerHTML = menuData.burgers.map(b =>
+            `<option value="${b.name}">${b.name} (€${b.price.toFixed(2)})</option>`
+        ).join('');
+        const shakeSel = modal.querySelector(`#triple-shake-${i}`);
+        shakeSel.innerHTML = menuData.milkshakes.map(s =>
+            `<option value="${s}">${s}</option>`
+        ).join('');
+    });
+    modal.classList.add('active');
+}
+
+function closeTripleComboModal() {
+    document.getElementById('triple-combo-modal').classList.remove('active');
+}
+
+function confirmTripleCombo() {
+    const modal = document.getElementById('triple-combo-modal');
+    const persons = [1,2,3].map(i => ({
+        burger: modal.querySelector(`#triple-burger-${i}`).value,
+        shake:  modal.querySelector(`#triple-shake-${i}`).value,
+    }));
+
+    const totalPrice = 25.00;
+    const name = 'Triple Byte Kombo: ' + persons.map((p,i) =>
+        `(${i+1}) ${p.burger} + ${p.shake}`
+    ).join(' | ') + ' + 3× Classic Fries';
+
+    // VAT split — burgers+fries = food (7%), milkshakes = beverage (19%)
+    const burgerRefTotal = persons.reduce((s, p) => {
+        const b = menuData.burgers.find(b => b.name === p.burger);
+        return s + (b ? b.price : 7.00);
+    }, 0);
+    const friesRef  = 3 * 2.66;
+    const shakeRef  = 3 * 3.50;
+    const totalRef  = burgerRefTotal + friesRef + shakeRef;
+    const foodGross = Math.round((totalPrice * (burgerRefTotal + friesRef) / totalRef) * 100) / 100;
+    const bevGross  = Math.round((totalPrice - foodGross) * 100) / 100;
+
+    cart.push({ name, price: totalPrice, foodGross, beverageGross: bevGross });
+    saveCart();
+    if (cart.length === 1) toggleBasket(true);
+    closeTripleComboModal();
+
+    const btn = modal.querySelector('#confirm-triple-btn');
+    const orig = btn.innerText;
+    btn.innerText = 'Hinzugefügt! ✅';
+    btn.style.background = 'var(--primary)';
+    setTimeout(() => { btn.innerText = orig; btn.style.background = ''; }, 1500);
+}
 
 function openComboSelection(type, feeLabel) {
     const fee = parseFloat(feeLabel.replace('€', '').replace('+', ''));
@@ -745,6 +802,35 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', friesModalHTML);
+    }
+
+    // Triple Byte Kombo Modal
+    if (!document.getElementById('triple-combo-modal')) {
+        const tripleHTML = `
+            <div class="combo-modal" id="triple-combo-modal" style="z-index:10001;">
+                <div class="modal-content" style="max-width:560px;">
+                    <h2 class="modal-title">👨‍👩‍👦 Triple Byte Kombo — €25.00</h2>
+                    <p style="color:var(--text-muted);margin-bottom:1.5rem;font-size:0.95rem;">3 Burger + 3 Milchshakes + 3× Classic Fries</p>
+                    ${[1,2,3].map(i => `
+                    <div style="border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+                        <p style="color:#fff;font-weight:700;margin-bottom:0.75rem;">Person ${i}</p>
+                        <div class="select-group" style="margin-bottom:0.75rem;">
+                            <label class="select-label">Burger</label>
+                            <select id="triple-burger-${i}" class="select-input"></select>
+                        </div>
+                        <div class="select-group" style="margin-bottom:0.5rem;">
+                            <label class="select-label">Milchshake</label>
+                            <select id="triple-shake-${i}" class="select-input"></select>
+                        </div>
+                        <p style="color:var(--text-muted);font-size:0.85rem;">🍟 Classic Fries — inklusive</p>
+                    </div>`).join('')}
+                    <div style="display:flex;gap:1rem;margin-top:1.5rem;">
+                        <button class="btn btn-outline" style="flex:1" onclick="closeTripleComboModal()">Abbrechen</button>
+                        <button class="btn" id="confirm-triple-btn" style="flex:1" onclick="confirmTripleCombo()">Zum Warenkorb hinzufügen</button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.insertAdjacentHTML('beforeend', tripleHTML);
     }
 
     // Soda Selection Modal

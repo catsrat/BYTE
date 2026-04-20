@@ -762,7 +762,18 @@
                         style="margin-top:1rem;padding:.5rem 1rem;width:100%">Wählen Sie Ihre Artikel aus</button>
                 </div>
             </div>`;
-        }).join('');
+        }).join('') + `<div class="menu-item-card tilt-card" style="border-color:var(--primary);background:rgba(255,127,0,0.15);position:relative">
+            <div class="menu-item-inner">
+                <div class="item-header">
+                    <div class="item-name">Triple Byte Kombo</div>
+                    <div class="item-price">€25.00</div>
+                </div>
+                <p class="item-desc">3 Burger + 3 Milchshakes + 3 Pommes — jeder wählt seinen eigenen</p>
+                <span class="item-tag tag-special">👨‍👩‍👦 Für Gruppen</span>
+                <button class="btn btn-outline" onclick="openTripleComboModal()"
+                    style="margin-top:1rem;padding:.5rem 1rem;width:100%">Wählen Sie Ihre Artikel aus</button>
+            </div>
+        </div>`;
         return `<section class="menu-section container relative">
             <div class="menu-title-wrap">
                 <div class="menu-title-bg" style="transform:rotate(1deg)">Bestes Preis-Leistungs-Verhältnis</div>
