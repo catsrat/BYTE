@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>BYTE — Setup Discount Code</title>
+    <style>
+        body { font-family: monospace; background: #0a0a0a; color: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .box { background: #1a1a1a; border: 1px solid #333; border-radius: 16px; padding: 2rem; max-width: 480px; width: 90%; }
+        h2 { color: #ff7f00; margin: 0 0 1rem; }
+        p { color: #888; font-size: 0.9rem; margin: 0 0 1.5rem; }
+        label { display: block; color: #aaa; font-size: 0.8rem; margin-bottom: 0.3rem; text-transform: uppercase; }
+        input { width: 100%; box-sizing: border-box; background: #111; border: 1px solid #333; border-radius: 8px; padding: 0.6rem 0.75rem; color: #fff; font-size: 1rem; font-family: monospace; margin-bottom: 1rem; outline: none; }
+        button { width: 100%; background: #ff7f00; border: none; border-radius: 8px; padding: 0.75rem; color: #000; font-size: 1rem; font-weight: 900; cursor: pointer; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        #status { margin-top: 1rem; font-size: 0.9rem; text-align: center; min-height: 1.5em; }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h2>🔧 Setup Discount Code</h2>
+    <p>This page adds a discount code to your Firebase database. Open it once, fill in the details, click the button — then delete this file.</p>
+
+    <label>Discount Code (e.g. BYTE10)</label>
+    <input id="code" type="text" value="BYTE10" style="text-transform:uppercase;" />
+
+    <label>Discount % (e.g. 10 for 10% off)</label>
+    <input id="percent" type="number" value="10" min="1" max="100" />
+
+    <button id="btn" onclick="setup()">Add to Firebase</button>
+    <div id="status"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+    const firebaseConfig = {
+        apiKey:            'AIzaSyCfAfJkP9EsxPR1Zp7J8jctgSoxIfM_gbE',
+        authDomain:        'byte-34c84.firebaseapp.com',
+        databaseURL:       'https://byte-34c84-default-rtdb.europe-west1.firebasedatabase.app',
+        projectId:         'byte-34c84',
+        storageBucket:     'byte-34c84.firebasestorage.app',
+        messagingSenderId: '700610883011',
+        appId:             '1:700610883011:web:b7e6f16233b67d7976e176'
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    async function setup() {
+        const code    = document.getElementById('code').value.trim().toUpperCase();
+        const percent = parseInt(document.getElementById('percent').value);
+        const btn     = document.getElementById('btn');
+        const status  = document.getElementById('status');
+
+        if (!code || isNaN(percent) || percent < 1 || percent > 100) {
+            status.textContent = '❌ Please fill in a valid code and percentage.';
+            status.style.color = '#f44336';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Adding…';
+        status.textContent = '';
+
+        try {
+            await db.ref('discountCodes/' + code).set({
+                active:   true,
+                discount: percent
+            });
+            status.textContent = '✅ Done! "' + code + '" (' + percent + '% off) added to Firebase. You can close this page now.';
+            status.style.color = '#4caf50';
+            btn.textContent = 'Added ✓';
+        } catch(e) {
+            status.textContent = '❌ Error: ' + e.message;
+            status.style.color = '#f44336';
+            btn.disabled = false;
+            btn.textContent = 'Add to Firebase';
+        }
+    }
+</script>
+</body>
+</html>
