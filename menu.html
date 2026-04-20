@@ -210,7 +210,20 @@
 <a class="btn" href="menu.html">Jetzt bestellen</a>
 </nav>
 </header>
-<main>
+<div style="position:fixed;top:95px;left:0;width:100%;z-index:99;background:var(--primary);overflow:hidden;padding:0.45rem 0;border-bottom:2px solid rgba(0,0,0,0.2);">
+    <div style="display:flex;animation:marquee 22s linear infinite;white-space:nowrap;width:max-content;">
+        <span style="padding:0 3rem;color:#000;font-weight:800;font-size:0.88rem;letter-spacing:0.5px;">🎉 Rabattcode <strong>BYTE10</strong> eingeben &amp; 10% auf deine Bestellung sparen! &nbsp;·&nbsp; Einfach Code im Warenkorb eingeben &amp; Nummer bestätigen.</span>
+        <span style="padding:0 3rem;color:#000;font-weight:800;font-size:0.88rem;letter-spacing:0.5px;">🎉 Rabattcode <strong>BYTE10</strong> eingeben &amp; 10% auf deine Bestellung sparen! &nbsp;·&nbsp; Einfach Code im Warenkorb eingeben &amp; Nummer bestätigen.</span>
+        <span style="padding:0 3rem;color:#000;font-weight:800;font-size:0.88rem;letter-spacing:0.5px;">🎉 Rabattcode <strong>BYTE10</strong> eingeben &amp; 10% auf deine Bestellung sparen! &nbsp;·&nbsp; Einfach Code im Warenkorb eingeben &amp; Nummer bestätigen.</span>
+    </div>
+</div>
+<style>
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-33.333%); } }
+@media (max-width: 1024px) { div[style*="position:fixed;top:95px"] { top: 75px !important; } }
+@media (max-width: 768px)  { div[style*="position:fixed;top:95px"] { top: 70px !important; } }
+@media (max-width: 480px)  { div[style*="position:fixed;top:95px"] { top: 65px !important; } }
+</style>
+<main style="padding-top:32px;">
 <section class="menu-hero container gs_reveal" style="padding-top:100px">
 <h1 class="text-gradient gs_reveal_text">Unsere Speisekarte</h1>
 <p class="text-muted" style="font-size: 1.2rem; max-width: 600px; margin: 0 auto;">Frisch zubereitete Zutaten aus der Region sorgen für das ultimative Burger-Erlebnis.Nehmen Sie ein BYTE.</p>
