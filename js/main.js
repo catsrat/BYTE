@@ -251,7 +251,16 @@ async function sendOTP() {
         document.getElementById('phone-step-2').style.display = '';
         document.getElementById('verify-otp-input').value = '';
     } catch(e) {
-        errorEl.textContent = 'Fehler beim Senden — bitte Nummer prüfen.';
+        console.error('sendOTP error:', e.code, e.message);
+        if (e.code === 'auth/invalid-phone-number') {
+            errorEl.textContent = '❌ Ungültige Nummer — mit Ländercode eingeben, z.B. +49176...';
+        } else if (e.code === 'auth/missing-client-identifier' || e.code === 'auth/captcha-check-failed') {
+            errorEl.textContent = '❌ Bitte zuerst das reCAPTCHA-Häkchen setzen.';
+        } else if (e.code === 'auth/too-many-requests') {
+            errorEl.textContent = '❌ Zu viele Versuche. Bitte später erneut versuchen.';
+        } else {
+            errorEl.textContent = '❌ Fehler: ' + (e.message || e.code);
+        }
         if (recaptchaVerifier) { try { recaptchaVerifier.clear(); } catch(e2) {} recaptchaVerifier = null; }
     } finally {
         sendBtn.textContent = 'Code senden';
