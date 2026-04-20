@@ -119,6 +119,10 @@ if (!localStorage.getItem('byteCartV36_migrated')) {
 }
 
 let cart = JSON.parse(localStorage.getItem('byteCart')) || [];
+let activeDiscount = null;       // { code, percent, phone } once verified
+let pendingDiscountData = null;  // { code, percent } waiting for OTP
+let recaptchaVerifier = null;
+let confirmationResult = null;
 
 function saveCart() {
     localStorage.setItem('byteCart', JSON.stringify(cart));
@@ -158,6 +162,149 @@ const referencePrices = {
 };
 
 let currentCombo = null;
+
+// ── DISCOUNT CODE + PHONE VERIFICATION ───────────────────────────────────────
+
+async function applyDiscountCode() {
+    const input  = document.getElementById('discount-code-input');
+    const status = document.getElementById('discount-status');
+    if (!input || !status) return;
+
+    if (activeDiscount) { removeDiscount(); return; }
+
+    const code = input.value.trim().toUpperCase();
+    if (!code) return;
+
+    status.textContent = 'Wird geprüft…';
+    status.style.color = 'var(--text-muted)';
+
+    try {
+        const db = firebase.database();
+        const snap = await db.ref('discountCodes/' + code).once('value');
+        const data = snap.val();
+        if (!data || !data.active) {
+            status.textContent = '❌ Ungültiger Rabattcode';
+            status.style.color = '#f44336';
+            return;
+        }
+        pendingDiscountData = { code, percent: data.discount };
+        status.textContent = '';
+        openPhoneVerifyModal();
+    } catch(e) {
+        status.textContent = '❌ Fehler beim Prüfen';
+        status.style.color = '#f44336';
+    }
+}
+
+function removeDiscount() {
+    activeDiscount = null;
+    const input  = document.getElementById('discount-code-input');
+    const status = document.getElementById('discount-status');
+    const btn    = document.getElementById('discount-apply-btn');
+    if (input)  input.value = '';
+    if (status) { status.textContent = ''; }
+    if (btn)    btn.textContent = 'Anwenden';
+    updateBasketUI();
+}
+
+function openPhoneVerifyModal() {
+    const modal = document.getElementById('phone-verify-modal');
+    if (!modal) return;
+    document.getElementById('phone-step-1').style.display = '';
+    document.getElementById('phone-step-2').style.display = 'none';
+    document.getElementById('verify-phone-input').value = '';
+    document.getElementById('phone-verify-error').textContent = '';
+    document.getElementById('otp-verify-error').textContent  = '';
+    modal.classList.add('active');
+}
+
+function closePhoneVerifyModal() {
+    const modal = document.getElementById('phone-verify-modal');
+    if (modal) modal.classList.remove('active');
+    pendingDiscountData = null;
+}
+
+async function sendOTP() {
+    const phoneInput = document.getElementById('verify-phone-input');
+    const errorEl   = document.getElementById('phone-verify-error');
+    const sendBtn   = document.getElementById('send-otp-btn');
+
+    let phone = phoneInput.value.trim().replace(/\s/g, '');
+    if (!phone) { errorEl.textContent = 'Bitte Nummer eingeben.'; return; }
+    if (phone.startsWith('0')) phone = '+49' + phone.slice(1);
+    if (!phone.startsWith('+')) phone = '+49' + phone;
+
+    sendBtn.textContent = 'Wird gesendet…';
+    sendBtn.disabled = true;
+    errorEl.textContent = '';
+
+    try {
+        if (!recaptchaVerifier) {
+            recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
+        }
+        confirmationResult = await firebase.auth().signInWithPhoneNumber(phone, recaptchaVerifier);
+        document.getElementById('otp-sent-to').textContent = 'Code gesendet an ' + phone;
+        document.getElementById('phone-step-1').style.display = 'none';
+        document.getElementById('phone-step-2').style.display = '';
+        document.getElementById('verify-otp-input').value = '';
+    } catch(e) {
+        errorEl.textContent = 'Fehler beim Senden — bitte Nummer prüfen.';
+        if (recaptchaVerifier) { recaptchaVerifier.clear(); recaptchaVerifier = null; }
+    } finally {
+        sendBtn.textContent = 'Code senden';
+        sendBtn.disabled = false;
+    }
+}
+
+async function verifyOTPAndApplyDiscount() {
+    const otpInput = document.getElementById('verify-otp-input');
+    const errorEl  = document.getElementById('otp-verify-error');
+    const btn      = document.getElementById('verify-otp-btn');
+
+    const otp = otpInput.value.trim();
+    if (!otp || otp.length < 6) { errorEl.textContent = 'Bitte 6-stelligen Code eingeben.'; return; }
+
+    btn.textContent = 'Wird geprüft…';
+    btn.disabled = true;
+    errorEl.textContent = '';
+
+    try {
+        const result = await confirmationResult.confirm(otp);
+        const uid    = result.user.uid;
+        const phone  = result.user.phoneNumber;
+        const code   = pendingDiscountData.code;
+
+        const db      = firebase.database();
+        const usedRef = db.ref('discountCodes/' + code + '/usedBy/' + uid);
+        const used    = await usedRef.once('value');
+
+        if (used.val()) {
+            errorEl.textContent = '❌ Diese Nummer hat den Code bereits verwendet.';
+            btn.disabled = false; btn.textContent = 'Bestätigen';
+            return;
+        }
+        await usedRef.set(true);
+
+        activeDiscount = { code, percent: pendingDiscountData.percent, phone };
+
+        const discountInput  = document.getElementById('discount-code-input');
+        const discountStatus = document.getElementById('discount-status');
+        const applyBtn       = document.getElementById('discount-apply-btn');
+        if (discountInput)  discountInput.value = code;
+        if (discountStatus) { discountStatus.textContent = '✅ ' + activeDiscount.percent + '% Rabatt aktiviert!'; discountStatus.style.color = '#4caf50'; }
+        if (applyBtn)       applyBtn.textContent = 'Entfernen';
+
+        updateBasketUI();
+        closePhoneVerifyModal();
+    } catch(e) {
+        errorEl.textContent = '❌ Falscher Code. Bitte erneut versuchen.';
+    } finally {
+        btn.textContent = 'Bestätigen';
+        btn.disabled = false;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function openTripleComboModal() {
     const modal = document.getElementById('triple-combo-modal');
@@ -506,7 +653,27 @@ function updateBasketUI() {
         itemsContainer.appendChild(itemEl);
     });
 
-    totalElement.innerText = `€${total.toFixed(2)}`;
+    // Discount
+    const subtotalRow    = document.getElementById('basket-subtotal-row');
+    const discountRow    = document.getElementById('basket-discount-row');
+    const subtotalAmount = document.getElementById('basket-subtotal-amount');
+    const discountAmount = document.getElementById('basket-discount-amount');
+    const discountLabel  = document.getElementById('basket-discount-label');
+
+    if (activeDiscount && total > 0) {
+        const saving      = Math.round(total * activeDiscount.percent / 100 * 100) / 100;
+        const finalTotal  = total - saving;
+        if (subtotalRow)    subtotalRow.style.display    = 'flex';
+        if (discountRow)    discountRow.style.display    = 'flex';
+        if (subtotalAmount) subtotalAmount.innerText     = `€${total.toFixed(2)}`;
+        if (discountLabel)  discountLabel.innerText      = `Rabatt (${activeDiscount.percent}%)`;
+        if (discountAmount) discountAmount.innerText     = `-€${saving.toFixed(2)}`;
+        totalElement.innerText = `€${finalTotal.toFixed(2)}`;
+    } else {
+        if (subtotalRow) subtotalRow.style.display = 'none';
+        if (discountRow) discountRow.style.display = 'none';
+        totalElement.innerText = `€${total.toFixed(2)}`;
+    }
 }
 
 function isStoreOpen(settings) {
@@ -618,8 +785,23 @@ function doCheckout() {
     // STEP 5: Store full cart snapshot for order.html (single source of truth)
     localStorage.setItem('byteOrderCart', JSON.stringify(orderItems));
 
-    // STEP 6: Build base order string — items only, no VAT yet (order.html adds that)
-    const finalOrder = `${itemsSummary}\n\nItems Total: €${items_gross.toFixed(2)}`;
+    // STEP 6: Apply discount if active
+    let discountLine = '';
+    let discountedGross = items_gross;
+    if (activeDiscount) {
+        const saving = round2(items_gross * activeDiscount.percent / 100);
+        discountedGross = round2(items_gross - saving);
+        discountLine = `\nRabattcode ${activeDiscount.code} (${activeDiscount.percent}%): -€${saving.toFixed(2)}`;
+        // Scale VAT amounts proportionally
+        const factor = discountedGross / items_gross;
+        total_net_food = round2(total_net_food * factor);
+        total_vat_7    = round2(total_vat_7    * factor);
+        total_net_bev  = round2(total_net_bev  * factor);
+        total_vat_19   = round2(total_vat_19   * factor);
+    }
+
+    // STEP 7: Build base order string — items only, no VAT yet (order.html adds that)
+    const finalOrder = `${itemsSummary}${discountLine}\n\nItems Total: €${discountedGross.toFixed(2)}`;
 
     window.location.href = `order.html?items=${encodeURIComponent(finalOrder)}`;
 }
@@ -671,10 +853,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3>Ihr Warenkorb</h3>
                     <button class="close-basket" onclick="toggleBasket(false)">✕</button>
                 </div>
-                <div class="basket-items" id="basket-items">
-                    <!-- Items injected here -->
-                </div>
+                <div class="basket-items" id="basket-items"></div>
                 <div class="basket-footer">
+                    <div style="margin-bottom:0.75rem;">
+                        <div style="display:flex;gap:0.5rem;">
+                            <input id="discount-code-input" placeholder="Rabattcode" style="flex:1;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:0.45rem 0.75rem;color:#fff;font-size:0.85rem;font-family:inherit;outline:none;text-transform:uppercase;" />
+                            <button id="discount-apply-btn" onclick="applyDiscountCode()" style="background:rgba(255,127,0,0.15);border:1px solid var(--primary);color:var(--primary);border-radius:8px;padding:0.45rem 0.9rem;font-size:0.82rem;font-weight:700;cursor:pointer;white-space:nowrap;">Anwenden</button>
+                        </div>
+                        <div id="discount-status" style="font-size:0.8rem;margin-top:0.35rem;min-height:1.1em;"></div>
+                    </div>
+                    <div id="basket-subtotal-row" style="display:none;justify-content:space-between;margin-bottom:0.25rem;color:var(--text-muted);font-size:0.88rem;">
+                        <span>Zwischensumme</span><span id="basket-subtotal-amount">€0.00</span>
+                    </div>
+                    <div id="basket-discount-row" style="display:none;justify-content:space-between;margin-bottom:0.5rem;color:#4caf50;font-size:0.88rem;font-weight:700;">
+                        <span id="basket-discount-label">Rabatt</span><span id="basket-discount-amount">-€0.00</span>
+                    </div>
                     <div class="basket-total">
                         <span>Gesamt</span>
                         <span id="basket-total-amount">€0.00</span>
@@ -808,6 +1001,41 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', friesModalHTML);
+    }
+
+    // Phone Verification Modal
+    if (!document.getElementById('phone-verify-modal')) {
+        document.body.insertAdjacentHTML('beforeend', `
+            <div class="combo-modal" id="phone-verify-modal" style="z-index:10002;">
+                <div class="modal-content" style="max-width:420px;">
+                    <div id="phone-step-1">
+                        <h2 class="modal-title">📱 Nummer verifizieren</h2>
+                        <p style="color:var(--text-muted);margin-bottom:1.25rem;font-size:0.95rem;">Einmalige Verifizierung — so stellen wir sicher, dass der Rabatt fair bleibt.</p>
+                        <div class="select-group">
+                            <label class="select-label">Ihre Handynummer</label>
+                            <input id="verify-phone-input" type="tel" placeholder="z.B. 0176 12345678" class="select-input" style="letter-spacing:1px;" />
+                        </div>
+                        <div id="phone-verify-error" style="color:#f44336;font-size:0.83rem;min-height:1.2em;margin:0.4rem 0;"></div>
+                        <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+                            <button class="btn btn-outline" style="flex:1" onclick="closePhoneVerifyModal()">Abbrechen</button>
+                            <button class="btn" id="send-otp-btn" style="flex:1" onclick="sendOTP()">Code senden</button>
+                        </div>
+                    </div>
+                    <div id="phone-step-2" style="display:none;">
+                        <h2 class="modal-title">💬 SMS-Code eingeben</h2>
+                        <p id="otp-sent-to" style="color:var(--text-muted);margin-bottom:1.25rem;font-size:0.9rem;"></p>
+                        <div class="select-group">
+                            <label class="select-label">6-stelliger Code</label>
+                            <input id="verify-otp-input" type="number" placeholder="123456" class="select-input" style="letter-spacing:6px;font-size:1.3rem;text-align:center;" />
+                        </div>
+                        <div id="otp-verify-error" style="color:#f44336;font-size:0.83rem;min-height:1.2em;margin:0.4rem 0;"></div>
+                        <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+                            <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('phone-step-1').style.display='';document.getElementById('phone-step-2').style.display='none';">Zurück</button>
+                            <button class="btn" id="verify-otp-btn" style="flex:1" onclick="verifyOTPAndApplyDiscount()">Bestätigen</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`);
     }
 
     // Triple Byte Kombo Modal
