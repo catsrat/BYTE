@@ -232,11 +232,13 @@ function openPhoneVerifyModal(context) {
     }
     modal.classList.add('active');
 
-    // Reset and render reCAPTCHA after modal is fully visible
+    // Reset and render reCAPTCHA
     if (recaptchaVerifier) { try { recaptchaVerifier.clear(); } catch(e) {} recaptchaVerifier = null; }
-    document.getElementById('recaptcha-container').innerHTML = '';
+    const rcContainer = document.getElementById('recaptcha-container');
+    rcContainer.innerHTML = '<p style="color:#aaa;font-size:13px;margin:8px 0;">⏳ Sicherheitsprüfung wird geladen…</p>';
     setTimeout(() => {
         try {
+            rcContainer.innerHTML = '';
             recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
                 size: 'normal',
                 callback: () => {
@@ -254,7 +256,7 @@ function openPhoneVerifyModal(context) {
         } catch(e) {
             console.error('reCAPTCHA init error:', e);
         }
-    }, 100);
+    }, 150);
 }
 
 function closePhoneVerifyModal() {
@@ -1082,7 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <input id="verify-phone-input" type="tel" placeholder="z.B. 0176 12345678" class="select-input" style="letter-spacing:1px;" />
                         </div>
                         <div style="color:rgba(255,255,255,0.5);font-size:0.8rem;margin:0.75rem 0 0.3rem;text-align:center;">✅ Bitte zuerst das Häkchen setzen, dann Code senden</div>
-                        <div id="recaptcha-container" style="margin:0.4rem 0 0.75rem;display:flex;justify-content:center;min-height:78px;align-items:center;">
+                        <div id="recaptcha-container" style="margin:0.4rem 0 0.75rem;min-height:78px;text-align:center;">
                             <span style="color:var(--text-muted);font-size:0.82rem;">Wird geladen…</span>
                         </div>
                         <div id="phone-verify-error" style="color:#f44336;font-size:0.83rem;min-height:1.2em;margin:0.4rem 0;"></div>
