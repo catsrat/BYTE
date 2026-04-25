@@ -146,20 +146,27 @@
         const db = getDb();
         if (!db) return code;
 
-        // Idempotent: if already saved return existing
-        const existing = await db.ref('spinWinUsers/' + uid).once('value');
-        if (existing.val()) return existing.val();
+        const phoneKey = phone.replace(/[^0-9]/g, '');
+
+        // Idempotent: check by UID or phone
+        if (uid) {
+            const existing = await db.ref('spinWinUsers/' + uid).once('value');
+            if (existing.val()) return existing.val();
+        }
+        const phoneExisting = await db.ref('spinWinPhones/' + phoneKey).once('value');
+        if (phoneExisting.val()) return phoneExisting.val();
 
         await db.ref('spinWinCodes/' + code).set({
             phone,
-            uid,
+            uid:        uid || null,
             prize:      prize.label,
             prizeType:  prize.type,
             prizeValue: prize.value,
             used:       false,
             createdAt:  Date.now()
         });
-        await db.ref('spinWinUsers/' + uid).set(code);
+        if (uid) await db.ref('spinWinUsers/' + uid).set(code);
+        await db.ref('spinWinPhones/' + phoneKey).set(code);
         return code;
     }
 
@@ -437,22 +444,31 @@
         const verified = sessionStorage.getItem('byteVerifiedPhone');
         if (verified) {
             spinPhone = verified;
-            // Check auth state then look for existing code
-            firebase.auth().onAuthStateChanged(async user => {
-                if (user) {
-                    spinUID = user.uid;
-                    const existing = await getExistingCode(user.uid);
-                    if (existing) {
-                        await showExistingResult(existing);
-                    } else {
-                        showStep(3);
-                    }
-                } else {
-                    // Phone in session but no active firebase user — ask for number again
-                    showStep(1);
-                    initSpinRecaptcha();
-                }
+            // Phone already verified this session — skip OTP, go straight to spin
+            // Check Firebase auth state to see if they already spun (best-effort)
+            const authCheck = new Promise(resolve => {
+                const unsub = firebase.auth().onAuthStateChanged(user => {
+                    unsub();
+                    resolve(user);
+                });
             });
+            const user = await Promise.race([
+                authCheck,
+                new Promise(r => setTimeout(() => r(null), 1500)) // 1.5s timeout
+            ]);
+            if (user) {
+                spinUID = user.uid;
+                const existing = await getExistingCode(user.uid);
+                if (existing) { await showExistingResult(existing); return; }
+            }
+            // Also check by phone in spinWinPhones (works even when auth session expired)
+            const phoneKey = verified.replace(/[^0-9]/g, '');
+            const db = getDb();
+            if (db) {
+                const phoneSnap = await db.ref('spinWinPhones/' + phoneKey).once('value');
+                if (phoneSnap.val()) { await showExistingResult(phoneSnap.val()); return; }
+            }
+            showStep(3);
         } else {
             showStep(1);
             initSpinRecaptcha();

@@ -41,6 +41,12 @@
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid && !data.exists()"
       }
+    },
+    "spinWinPhones": {
+      "$phoneKey": {
+        ".read": "auth != null",
+        ".write": "auth != null && !data.exists()"
+      }
     }
   }
 }
