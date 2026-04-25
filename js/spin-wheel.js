@@ -18,9 +18,7 @@
     // ── STATE ─────────────────────────────────────────────────────────────────
     let currentRotationDeg = 0;
     let isSpinning         = false;
-    let spinPhone          = null;   // formatted phone used during wheel flow
-    let spinConfirmResult  = null;   // Firebase confirmationResult
-    let spinRcVerifier     = null;
+    let spinPhone          = null;
     let spinUID            = null;
 
     // ── UTILS ─────────────────────────────────────────────────────────────────
@@ -177,30 +175,6 @@
         return snap.val();
     }
 
-    // ── reCAPTCHA ─────────────────────────────────────────────────────────────
-    function initSpinRecaptcha() {
-        if (!window.firebase || !firebase.auth) return;
-        if (spinRcVerifier) { try { spinRcVerifier.clear(); } catch (e) {} spinRcVerifier = null; }
-        const container = document.getElementById('spin-recaptcha');
-        if (!container) return;
-        container.innerHTML = '';
-        setTimeout(() => {
-            try {
-                spinRcVerifier = new firebase.auth.RecaptchaVerifier('spin-recaptcha', {
-                    size: 'normal',
-                    callback: () => {
-                        const btn = document.getElementById('spin-send-otp-btn');
-                        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-                    },
-                    'expired-callback': () => {
-                        const btn = document.getElementById('spin-send-otp-btn');
-                        if (btn) { btn.disabled = true; btn.style.opacity = '0.45'; }
-                    }
-                });
-                spinRcVerifier.render().catch(e => console.error('spin reCAPTCHA render:', e));
-            } catch (e) { console.error('spin reCAPTCHA init:', e); }
-        }, 200);
-    }
 
     // ── POPUP HTML ────────────────────────────────────────────────────────────
     function buildPopupHTML() {
@@ -254,25 +228,13 @@
     <canvas id="sw-canvas" width="270" height="270"></canvas>
   </div>
 
-  <!-- Step 1 – phone + reCAPTCHA -->
+  <!-- Step 1 – verify phone -->
   <div id="sw-step1" class="sw-section">
-    <input id="sw-phone" class="sw-input" type="tel" placeholder="Handynummer z.B. 0176 12345678" />
-    <div id="spin-recaptcha" style="display:flex;justify-content:center;min-height:78px;align-items:center;"></div>
-    <p class="sw-hint">✅ Bitte zuerst das Häkchen setzen, dann Code anfordern.</p>
-    <div id="sw-err1" class="sw-err"></div>
-    <button id="spin-send-otp-btn" class="sw-btn" disabled style="opacity:.45" onclick="window._swSendOTP()">Code senden</button>
+    <p class="sw-hint" style="color:#aaa;font-size:.88rem;">Einmalig verifizieren — jede Nummer kann nur einmal drehen.</p>
+    <button class="sw-btn" onclick="window._swRequestVerify()">📱 Nummer verifizieren &amp; drehen</button>
   </div>
 
-  <!-- Step 2 – OTP -->
-  <div id="sw-step2" class="sw-section" style="display:none">
-    <p id="sw-otp-label" class="sw-hint" style="font-size:.84rem;color:#aaa"></p>
-    <input id="sw-otp-input" class="sw-input" type="number" placeholder="_ _ _ _ _ _" />
-    <div id="sw-err2" class="sw-err"></div>
-    <button class="sw-btn" onclick="window._swVerifyOTP()">Verifizieren &amp; Drehen! 🎡</button>
-    <button style="background:none;border:none;color:#666;font-size:.82rem;cursor:pointer;padding:2px 0;" onclick="window._swBackToPhone()">← Neue Nummer eingeben</button>
-  </div>
-
-  <!-- Step 3 – spin ready (already verified) -->
+  <!-- Step 3 – spin ready -->
   <div id="sw-step3" class="sw-section" style="display:none">
     <button class="sw-btn" onclick="window._swSpin()">🎡 Jetzt drehen!</button>
   </div>
@@ -295,7 +257,7 @@
 
     // ── SHOW / HIDE STEPS ─────────────────────────────────────────────────────
     function showStep(n) {
-        [1, 2, 3].forEach(i => {
+        [1, 3].forEach(i => {
             const el = document.getElementById('sw-step' + i);
             if (el) el.style.display = i === n ? 'flex' : 'none';
         });
@@ -329,71 +291,41 @@
         }
     }
 
-    // ── OTP SEND ──────────────────────────────────────────────────────────────
-    window._swSendOTP = async function () {
-        const raw = document.getElementById('sw-phone').value.trim().replace(/\s/g, '');
-        const err = document.getElementById('sw-err1');
-        const btn = document.getElementById('spin-send-otp-btn');
-        if (!raw) { err.textContent = 'Bitte Nummer eingeben.'; return; }
+    // ── REQUEST VERIFY via main.js modal ─────────────────────────────────────
+    window._swRequestVerify = function () {
+        // Hide wheel overlay so phone modal is visible on top
+        const overlay = document.getElementById('sw-overlay');
+        if (overlay) overlay.style.display = 'none';
 
-        let phone = raw;
-        if (phone.startsWith('0')) phone = '+49' + phone.slice(1);
-        if (!phone.startsWith('+')) phone = '+49' + phone;
-        spinPhone = phone;
+        // Callback called by main.js after successful verification
+        window._swOnVerified = function (uid, phone) {
+            spinUID   = uid;
+            spinPhone = phone;
+            window._swOnVerified = null;
+            if (overlay) overlay.style.display = 'flex';
+            // Check if already spun
+            (async () => {
+                try {
+                    const db = getDb();
+                    if (db) {
+                        const phoneKey = phone.replace(/[^0-9]/g, '');
+                        const snap = await db.ref('spinWinPhones/' + phoneKey).once('value');
+                        if (snap.val()) { showExistingResult(snap.val()); return; }
+                    }
+                } catch (e) {}
+                showStep(3);
+            })();
+        };
 
-        btn.disabled   = true;
-        btn.textContent = 'Wird gesendet…';
-        err.textContent = '';
+        // If user closes modal without verifying, re-show the wheel
+        window._swOnVerifyCancel = function () {
+            window._swOnVerified = null;
+            window._swOnVerifyCancel = null;
+            if (overlay) overlay.style.display = 'flex';
+        };
 
-        try {
-            spinConfirmResult = await firebase.auth().signInWithPhoneNumber(phone, spinRcVerifier);
-            showStep(2);
-            document.getElementById('sw-otp-label').textContent = 'Code gesendet an ' + phone;
-        } catch (e) {
-            err.textContent = '❌ ' + (e.message || e.code);
-            btn.disabled    = false;
-            btn.textContent = 'Code senden';
-            if (spinRcVerifier) { try { spinRcVerifier.clear(); } catch (e2) {} spinRcVerifier = null; }
-            initSpinRecaptcha();
-        }
-    };
-
-    // ── BACK TO PHONE ─────────────────────────────────────────────────────────
-    window._swBackToPhone = function () {
-        document.getElementById('sw-otp-input').value = '';
-        document.getElementById('sw-err2').textContent = '';
-        showStep(1);
-        initSpinRecaptcha();
-    };
-
-    // ── OTP VERIFY ────────────────────────────────────────────────────────────
-    window._swVerifyOTP = async function () {
-        const otp  = document.getElementById('sw-otp-input').value.trim();
-        const err  = document.getElementById('sw-err2');
-        const btn  = document.querySelector('#sw-step2 .sw-btn');
-        if (!otp || otp.length < 6) { err.textContent = 'Bitte 6-stelligen Code eingeben.'; return; }
-
-        btn.disabled    = true;
-        btn.textContent = 'Wird geprüft…';
-        err.textContent = '';
-
-        try {
-            const result = await spinConfirmResult.confirm(otp);
-            spinUID = result.user.uid;
-            sessionStorage.setItem('byteVerifiedPhone', spinPhone);
-
-            // Check if this UID already spun
-            const existing = await getExistingCode(spinUID);
-            if (existing) {
-                await showExistingResult(existing);
-                return;
-            }
-
-            showStep(3); // show spin button
-        } catch (e) {
-            err.textContent  = '❌ Falscher Code. Nochmal versuchen.';
-            btn.disabled     = false;
-            btn.textContent  = 'Verifizieren & Drehen! 🎡';
+        if (typeof openPhoneVerifyModal === 'function') {
+            openPhoneVerifyModal('spinWheel');
         }
     };
 
@@ -468,7 +400,6 @@
             })();
         } else {
             showStep(1);
-            initSpinRecaptcha();
         }
     }
 

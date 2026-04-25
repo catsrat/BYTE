@@ -398,6 +398,13 @@ async function verifyOTPAndApplyDiscount() {
             return;
         }
 
+        // ── Spin wheel ────────────────────────────────────────────────────────
+        if (verifyContext === 'spinWheel') {
+            closePhoneVerifyModal();
+            if (window._swOnVerified) window._swOnVerified(uid, phone);
+            return;
+        }
+
         // ── Spin-wheel code ───────────────────────────────────────────────────
         if (verifyContext === 'spinCode') {
             const { code, spinData } = pendingDiscountData;
