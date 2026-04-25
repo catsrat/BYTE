@@ -445,31 +445,18 @@
         const verified = sessionStorage.getItem('byteVerifiedPhone');
         if (verified) {
             spinPhone = verified;
-            // Phone already verified this session — skip OTP, go straight to spin
-            // Check Firebase auth state to see if they already spun (best-effort)
-            const authCheck = new Promise(resolve => {
-                const unsub = firebase.auth().onAuthStateChanged(user => {
-                    unsub();
-                    resolve(user);
-                });
-            });
-            const user = await Promise.race([
-                authCheck,
-                new Promise(r => setTimeout(() => r(null), 1500)) // 1.5s timeout
-            ]);
-            if (user) {
-                spinUID = user.uid;
-                const existing = await getExistingCode(user.uid);
-                if (existing) { await showExistingResult(existing); return; }
-            }
-            // Also check by phone in spinWinPhones (works even when auth session expired)
-            const phoneKey = verified.replace(/[^0-9]/g, '');
-            const db = getDb();
-            if (db) {
-                const phoneSnap = await db.ref('spinWinPhones/' + phoneKey).once('value');
-                if (phoneSnap.val()) { await showExistingResult(phoneSnap.val()); return; }
-            }
-            showStep(3);
+            showStep(3); // already verified — show spin button immediately
+
+            // Background: check if this phone already spun (don't block the UI)
+            (async () => {
+                try {
+                    const db = getDb();
+                    if (!db) return;
+                    const phoneKey = verified.replace(/[^0-9]/g, '');
+                    const snap = await db.ref('spinWinPhones/' + phoneKey).once('value');
+                    if (snap.val()) showExistingResult(snap.val());
+                } catch (e) { /* best-effort */ }
+            })();
         } else {
             showStep(1);
             initSpinRecaptcha();
