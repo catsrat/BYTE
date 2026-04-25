@@ -336,17 +336,18 @@
         if (btn) btn.disabled = true;
 
         const prizeIndex = weightedRandom(WEIGHTS);
-        animateSpin(canvas, prizeIndex, async () => {
+        animateSpin(canvas, prizeIndex, () => {
             const prize = PRIZES[prizeIndex];
             let code    = null;
 
             if (prize.type !== 'none') {
                 code = generateCode();
-                const uid = spinUID || (firebase.auth().currentUser && firebase.auth().currentUser.uid);
-                if (uid) await saveCode(uid, spinPhone, prize, code);
-                // Store for cart use
+                // Store immediately — result shows even if Firebase save fails
                 sessionStorage.setItem('byteSpinCode',  code);
                 sessionStorage.setItem('byteSpinPrize', JSON.stringify(prize));
+                // Save to Firebase in background
+                const uid = spinUID || (window.firebase && firebase.auth && firebase.auth().currentUser && firebase.auth().currentUser.uid);
+                saveCode(uid, spinPhone, prize, code).catch(e => console.warn('saveCode:', e));
             }
 
             showResult(prize.label, prize.type, code);
