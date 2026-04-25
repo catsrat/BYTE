@@ -120,10 +120,11 @@ if (!localStorage.getItem('byteCartV36_migrated')) {
 
 let cart = JSON.parse(localStorage.getItem('byteCart')) || [];
 let activeDiscount = null;       // { code, percent, phone } once verified
-let pendingDiscountData = null;  // { code, percent } waiting for OTP
+let activeSpinPrize = null;      // { code, type, value, label } for free-item/delivery spin prizes
+let pendingDiscountData = null;  // { code, percent } or { code, spinData } waiting for OTP
 let recaptchaVerifier = null;
 let confirmationResult = null;
-let verifyContext = 'discount';  // 'discount' or 'checkout'
+let verifyContext = 'discount';  // 'discount' | 'checkout' | 'spinCode'
 
 function saveCart() {
     localStorage.setItem('byteCart', JSON.stringify(cart));
@@ -171,7 +172,7 @@ async function applyDiscountCode() {
     const status = document.getElementById('discount-status');
     if (!input || !status) return;
 
-    if (activeDiscount) { removeDiscount(); return; }
+    if (activeDiscount || activeSpinPrize) { removeDiscount(); return; }
 
     const code = input.value.trim().toUpperCase();
     if (!code) return;
@@ -181,6 +182,35 @@ async function applyDiscountCode() {
 
     try {
         const db = firebase.database();
+
+        // ── SPIN-WHEEL CODES ─────────────────────────────────────────────────
+        if (code.startsWith('SPIN')) {
+            const spinSnap = await db.ref('spinWinCodes/' + code).once('value');
+            const spinData = spinSnap.val();
+            if (!spinData) {
+                status.textContent = '❌ Ungültiger Code';
+                status.style.color = '#f44336';
+                return;
+            }
+            if (spinData.used) {
+                status.textContent = '❌ Dieser Code wurde bereits eingelöst';
+                status.style.color = '#f44336';
+                return;
+            }
+            // If phone already verified this session and it matches the code → apply immediately
+            const savedPhone = sessionStorage.getItem('byteVerifiedPhone');
+            if (savedPhone && savedPhone === spinData.phone) {
+                await applySpinPrize(code, spinData);
+                return;
+            }
+            // Need phone verification
+            pendingDiscountData = { code, spinData };
+            status.textContent  = '';
+            openPhoneVerifyModal('spinCode');
+            return;
+        }
+
+        // ── REGULAR DISCOUNT CODES (e.g. BYTE10) ────────────────────────────
         const snap = await db.ref('discountCodes/' + code).once('value');
         const data = snap.val();
         if (!data || !data.active) {
@@ -188,10 +218,15 @@ async function applyDiscountCode() {
             status.style.color = '#f44336';
             return;
         }
+        // If phone already verified skip straight to applying (still need to check usedBy)
+        const savedPhone = sessionStorage.getItem('byteVerifiedPhone');
+        if (savedPhone) {
+            pendingDiscountData = { code, percent: data.discount };
+            openPhoneVerifyModal('discountSkipPhone');
+            return;
+        }
         pendingDiscountData = { code, percent: data.discount };
-        status.textContent = '';
-        // Pre-init reCAPTCHA before modal opens so it renders instantly
-        if (recaptchaVerifier) { try { recaptchaVerifier.clear(); } catch(e) {} recaptchaVerifier = null; }
+        status.textContent  = '';
         openPhoneVerifyModal();
     } catch(e) {
         status.textContent = '❌ Fehler beim Prüfen';
@@ -199,8 +234,31 @@ async function applyDiscountCode() {
     }
 }
 
+async function applySpinPrize(code, data) {
+    const db = firebase.database();
+    await db.ref('spinWinCodes/' + code + '/used').set(true);
+
+    const status  = document.getElementById('discount-status');
+    const applyBtn = document.getElementById('discount-apply-btn');
+    const codeInput = document.getElementById('discount-code-input');
+
+    if (data.prizeType === 'discount') {
+        activeDiscount = { code, percent: data.prizeValue, phone: data.phone };
+        if (codeInput)  codeInput.value = code;
+        if (status)     { status.textContent = '✅ ' + data.prizeValue + '% Rabatt aktiviert!'; status.style.color = '#4caf50'; }
+        if (applyBtn)   applyBtn.textContent = 'Entfernen';
+    } else {
+        activeSpinPrize = { code, type: data.prizeType, value: data.prizeValue, label: data.prize };
+        if (codeInput)  codeInput.value = code;
+        if (status)     { status.textContent = '✅ ' + data.prize + ' aktiviert!'; status.style.color = '#4caf50'; }
+        if (applyBtn)   applyBtn.textContent = 'Entfernen';
+    }
+    updateBasketUI();
+}
+
 function removeDiscount() {
-    activeDiscount = null;
+    activeDiscount  = null;
+    activeSpinPrize = null;
     const input  = document.getElementById('discount-code-input');
     const status = document.getElementById('discount-status');
     const btn    = document.getElementById('discount-apply-btn');
@@ -312,7 +370,7 @@ async function verifyOTPAndApplyDiscount() {
     if (!otp || otp.length < 6) { errorEl.textContent = 'Bitte 6-stelligen Code eingeben.'; return; }
 
     btn.textContent = 'Wird geprüft…';
-    btn.disabled = true;
+    btn.disabled    = true;
     errorEl.textContent = '';
 
     try {
@@ -320,17 +378,53 @@ async function verifyOTPAndApplyDiscount() {
         const uid    = result.user.uid;
         const phone  = result.user.phoneNumber;
 
-        // Always store verified phone for this session
         sessionStorage.setItem('byteVerifiedPhone', phone);
 
+        // ── Checkout ──────────────────────────────────────────────────────────
         if (verifyContext === 'checkout') {
-            // Checkout flow — just verified, now proceed
             closePhoneVerifyModal();
             checkout();
             return;
         }
 
-        // Discount flow — check if phone already used this code
+        // ── Spin-wheel code ───────────────────────────────────────────────────
+        if (verifyContext === 'spinCode') {
+            const { code, spinData } = pendingDiscountData;
+            if (phone !== spinData.phone) {
+                errorEl.textContent = '❌ Diese Nummer ist nicht mit dem Code verknüpft.';
+                btn.disabled = false; btn.textContent = 'Bestätigen';
+                return;
+            }
+            await applySpinPrize(code, spinData);
+            closePhoneVerifyModal();
+            return;
+        }
+
+        // ── Regular discount (phone already verified — skip re-entry) ─────────
+        if (verifyContext === 'discountSkipPhone') {
+            const code    = pendingDiscountData.code;
+            const db      = firebase.database();
+            const usedRef = db.ref('discountCodes/' + code + '/usedBy/' + uid);
+            const used    = await usedRef.once('value');
+            if (used.val()) {
+                errorEl.textContent = '❌ Diese Nummer hat den Code bereits verwendet.';
+                btn.disabled = false; btn.textContent = 'Bestätigen';
+                return;
+            }
+            await usedRef.set(true);
+            activeDiscount = { code, percent: pendingDiscountData.percent, phone };
+            const discountInput  = document.getElementById('discount-code-input');
+            const discountStatus = document.getElementById('discount-status');
+            const applyBtn       = document.getElementById('discount-apply-btn');
+            if (discountInput)  discountInput.value = code;
+            if (discountStatus) { discountStatus.textContent = '✅ ' + activeDiscount.percent + '% Rabatt aktiviert!'; discountStatus.style.color = '#4caf50'; }
+            if (applyBtn)       applyBtn.textContent = 'Entfernen';
+            updateBasketUI();
+            closePhoneVerifyModal();
+            return;
+        }
+
+        // ── Regular discount (full flow) ──────────────────────────────────────
         const code    = pendingDiscountData.code;
         const db      = firebase.database();
         const usedRef = db.ref('discountCodes/' + code + '/usedBy/' + uid);
@@ -358,7 +452,7 @@ async function verifyOTPAndApplyDiscount() {
         errorEl.textContent = '❌ Falscher Code. Bitte erneut versuchen.';
     } finally {
         btn.textContent = 'Bestätigen';
-        btn.disabled = false;
+        btn.disabled    = false;
     }
 }
 
@@ -727,6 +821,12 @@ function updateBasketUI() {
         if (discountLabel)  discountLabel.innerText      = `Rabatt (${activeDiscount.percent}%)`;
         if (discountAmount) discountAmount.innerText     = `-€${saving.toFixed(2)}`;
         totalElement.innerText = `€${finalTotal.toFixed(2)}`;
+    } else if (activeSpinPrize && total > 0) {
+        if (subtotalRow)    subtotalRow.style.display = 'none';
+        if (discountRow)    discountRow.style.display = 'flex';
+        if (discountLabel)  discountLabel.innerText   = '🎡 ' + activeSpinPrize.label;
+        if (discountAmount) discountAmount.innerText  = 'Inklusive!';
+        totalElement.innerText = `€${total.toFixed(2)}`;
     } else {
         if (subtotalRow) subtotalRow.style.display = 'none';
         if (discountRow) discountRow.style.display = 'none';

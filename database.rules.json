@@ -26,6 +26,21 @@
           }
         }
       }
+    },
+    "spinWinCodes": {
+      "$code": {
+        ".read": true,
+        ".write": "auth != null && !data.exists()",
+        "used": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "spinWinUsers": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && !data.exists()"
+      }
     }
   }
 }
