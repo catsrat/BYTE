@@ -134,6 +134,11 @@
         // orderCart is the canonical state. All VAT and receipt text are derived from it.
         const orderCart = { items: [], deliveryFee: 0 };
         const round2 = v => Math.round(v * 100) / 100;
+        // Load discount passed from cart
+        let orderDiscount   = null;
+        let orderSpinPrize  = null;
+        try { orderDiscount  = JSON.parse(sessionStorage.getItem('byteOrderDiscount')  || 'null'); } catch {}
+        try { orderSpinPrize = JSON.parse(sessionStorage.getItem('byteOrderSpinPrize') || 'null'); } catch {}
 
         const BEVERAGES_KW = ['coca-cola','fanta','sprite','water','wasser','shake','soda','drink',
                               'cola','juice','lemon','beer','bier','kaffee','coffee','tea','tee','milkshake','mineral'];
@@ -172,11 +177,27 @@
             const delivery_net   = round2(delivery_gross / 1.19);
             const delivery_vat   = round2(delivery_gross - delivery_net);
 
-            const total_vat   = round2(vat_7 + vat_19 + delivery_vat);
-            const gross_total = round2(items_gross + delivery_gross);
+            const total_vat_pre = round2(vat_7 + vat_19 + delivery_vat);
+            let gross_total   = round2(items_gross + delivery_gross);
+
+            // Apply percentage discount
+            let discountSaving = 0;
+            let discountLabel  = '';
+            if (orderDiscount && orderDiscount.percent) {
+                discountSaving = round2(gross_total * orderDiscount.percent / 100);
+                discountLabel  = `Rabattcode ${orderDiscount.code} (${orderDiscount.percent}%)`;
+                const factor   = (gross_total - discountSaving) / gross_total;
+                gross_total    = round2(gross_total - discountSaving);
+                vat_7   = round2(vat_7   * factor);
+                vat_19  = round2(vat_19  * factor);
+                net_food = round2(net_food * factor);
+                net_bev  = round2(net_bev  * factor);
+            }
+            const total_vat = round2(vat_7 + vat_19 + delivery_vat);
 
             return { net_food, vat_7, net_bev, vat_19, items_gross,
-                     delivery_gross, delivery_net, delivery_vat, total_vat, gross_total };
+                     delivery_gross, delivery_net, delivery_vat, total_vat,
+                     gross_total, discountSaving, discountLabel };
         }
 
         function renderReceipt(totals) {
@@ -188,6 +209,8 @@
 
             out += `\n\nItems Total: €${totals.items_gross.toFixed(2)}`;
             if (totals.delivery_gross > 0) out += `\n\nDelivery Fee: €${totals.delivery_gross.toFixed(2)}`;
+            if (totals.discountSaving > 0) out += `\n${totals.discountLabel}: -€${totals.discountSaving.toFixed(2)}`;
+            if (orderSpinPrize) out += `\nGewinn: ${orderSpinPrize.label} (Code: ${orderSpinPrize.code})`;
             out += `\n\n--- VAT Breakdown ---\n`;
             if (totals.net_food > 0) out += `\nNet Food: €${totals.net_food.toFixed(2)}\nVAT (7% Food): €${totals.vat_7.toFixed(2)}`;
             if (totals.net_bev  > 0) out += `\n\nNet Drinks: €${totals.net_bev.toFixed(2)}\nVAT (19% Drinks): €${totals.vat_19.toFixed(2)}`;

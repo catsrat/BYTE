@@ -975,6 +975,17 @@ function doCheckout() {
     // Pass verified phone to order.html for pre-fill
     const vPhone = sessionStorage.getItem('byteVerifiedPhone');
     if (vPhone) sessionStorage.setItem('byteOrderPhone', vPhone);
+    // Pass active discount/spin prize to order.html
+    if (activeDiscount) {
+        sessionStorage.setItem('byteOrderDiscount', JSON.stringify(activeDiscount));
+    } else {
+        sessionStorage.removeItem('byteOrderDiscount');
+    }
+    if (activeSpinPrize) {
+        sessionStorage.setItem('byteOrderSpinPrize', JSON.stringify(activeSpinPrize));
+    } else {
+        sessionStorage.removeItem('byteOrderSpinPrize');
+    }
 
     // STEP 6: Apply discount if active
     let discountLine = '';
