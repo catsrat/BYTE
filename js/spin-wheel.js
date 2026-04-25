@@ -269,6 +269,7 @@
     <input id="sw-otp-input" class="sw-input" type="number" placeholder="_ _ _ _ _ _" />
     <div id="sw-err2" class="sw-err"></div>
     <button class="sw-btn" onclick="window._swVerifyOTP()">Verifizieren &amp; Drehen! 🎡</button>
+    <button style="background:none;border:none;color:#666;font-size:.82rem;cursor:pointer;padding:2px 0;" onclick="window._swBackToPhone()">← Neue Nummer eingeben</button>
   </div>
 
   <!-- Step 3 – spin ready (already verified) -->
@@ -355,6 +356,14 @@
             if (spinRcVerifier) { try { spinRcVerifier.clear(); } catch (e2) {} spinRcVerifier = null; }
             initSpinRecaptcha();
         }
+    };
+
+    // ── BACK TO PHONE ─────────────────────────────────────────────────────────
+    window._swBackToPhone = function () {
+        document.getElementById('sw-otp-input').value = '';
+        document.getElementById('sw-err2').textContent = '';
+        showStep(1);
+        initSpinRecaptcha();
     };
 
     // ── OTP VERIFY ────────────────────────────────────────────────────────────
