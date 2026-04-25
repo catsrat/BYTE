@@ -257,7 +257,7 @@
   <!-- Step 1 – phone + reCAPTCHA -->
   <div id="sw-step1" class="sw-section">
     <input id="sw-phone" class="sw-input" type="tel" placeholder="Handynummer z.B. 0176 12345678" />
-    <div id="sw-recaptcha" id="sw-recaptcha-row"></div>
+    <div id="spin-recaptcha" style="display:flex;justify-content:center;min-height:78px;align-items:center;"></div>
     <p class="sw-hint">✅ Bitte zuerst das Häkchen setzen, dann Code anfordern.</p>
     <div id="sw-err1" class="sw-err"></div>
     <button id="spin-send-otp-btn" class="sw-btn" disabled style="opacity:.45" onclick="window._swSendOTP()">Code senden</button>
