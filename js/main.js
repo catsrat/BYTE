@@ -246,8 +246,13 @@ async function applyDiscountCode() {
 }
 
 async function applySpinPrize(code, data) {
-    const db = firebase.database();
-    await db.ref('spinWinCodes/' + code + '/used').set(true);
+    // Mark used in Firebase — best effort, don't block prize application if it fails
+    try {
+        const db = firebase.database();
+        await db.ref('spinWinCodes/' + code + '/used').set(true);
+    } catch(e) {
+        console.warn('Could not mark spin code used in Firebase:', e);
+    }
 
     const status  = document.getElementById('discount-status');
     const applyBtn = document.getElementById('discount-apply-btn');
