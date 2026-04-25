@@ -986,6 +986,9 @@ function doCheckout() {
     } else {
         sessionStorage.removeItem('byteOrderSpinPrize');
     }
+    // Consume spin code immediately so it can't be reused in the same session
+    sessionStorage.removeItem('byteSpinCode');
+    sessionStorage.removeItem('byteSpinPrize');
 
     // STEP 6: Apply discount if active
     let discountLine = '';

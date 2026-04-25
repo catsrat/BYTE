@@ -375,6 +375,14 @@
                 });
             } catch(e) {}
 
+            // Mark spin code as used in Firebase now that order is confirmed
+            if (orderDiscount && orderDiscount.code && orderDiscount.code.startsWith('SPIN')) {
+                try { await db.ref('spinWinCodes/' + orderDiscount.code + '/used').set(true); } catch(e) {}
+            }
+            // Clear discount from session so it can't be reused
+            sessionStorage.removeItem('byteOrderDiscount');
+            sessionStorage.removeItem('byteOrderSpinPrize');
+
             const formData = new FormData(form);
             formData.append('Order_ID', '#' + orderId);
             fetch('https://formsubmit.co/' + CONFIG.formsubmitEmail, {
