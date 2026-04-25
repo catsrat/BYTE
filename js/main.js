@@ -240,7 +240,7 @@ async function applyDiscountCode() {
         status.textContent  = '';
         openPhoneVerifyModal();
     } catch(e) {
-        status.textContent = '❌ Fehler beim Prüfen';
+        status.textContent = '❌ ' + (e.message || 'Fehler beim Prüfen');
         status.style.color = '#f44336';
     }
 }
@@ -759,18 +759,19 @@ function addToCart(itemName, price, overrideFood, overrideBev) {
     });
     saveCart();
     
-    // Show feedback
-    const btn = event.currentTarget;
-    const originalText = btn.innerText;
-    btn.innerText = "Hinzugefügt! ✅";
-    btn.style.background = "var(--primary)";
-    btn.style.color = "#fff";
-    
-    setTimeout(() => {
-        btn.innerText = originalText;
-        btn.style.background = "";
-        btn.style.color = "";
-    }, 1500);
+    // Show feedback on the clicked button (passed via onclick="addToCart(...)" this context)
+    const btn = document.activeElement;
+    if (btn && btn.tagName === 'BUTTON') {
+        const originalText = btn.innerText;
+        btn.innerText = "Hinzugefügt! ✅";
+        btn.style.background = "var(--primary)";
+        btn.style.color = "#fff";
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.style.background = "";
+            btn.style.color = "";
+        }, 1500);
+    }
 
     // Open basket automatically on first item
     if (cart.length === 1) toggleBasket(true);
