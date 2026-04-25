@@ -428,7 +428,7 @@
     }
 
     // ── ENTRY POINT ───────────────────────────────────────────────────────────
-    function showPopup() {
+    async function showPopup() {
         if (sessionStorage.getItem('swShown')) return;
         if (document.getElementById('sw-overlay')) return;
         sessionStorage.setItem('swShown', '1');
