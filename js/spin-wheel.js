@@ -429,9 +429,10 @@
 
     // ── ENTRY POINT ───────────────────────────────────────────────────────────
     async function showPopup() {
-        if (sessionStorage.getItem('swShown')) return;
         if (document.getElementById('sw-overlay')) return;
-        sessionStorage.setItem('swShown', '1');
+        const lastShown = localStorage.getItem('swLastShown');
+        if (lastShown && Date.now() - parseInt(lastShown) < 24 * 60 * 60 * 1000) return;
+        localStorage.setItem('swLastShown', Date.now());
 
         const overlay  = document.createElement('div');
         overlay.id     = 'sw-overlay';
