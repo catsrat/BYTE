@@ -185,6 +185,17 @@ async function applyDiscountCode() {
 
         // ── SPIN-WHEEL CODES ─────────────────────────────────────────────────
         if (code.startsWith('SPIN')) {
+            // If this is the code the user just won in this session, apply from sessionStorage
+            const sessionSpinCode  = sessionStorage.getItem('byteSpinCode');
+            const sessionSpinPrize = sessionStorage.getItem('byteSpinPrize');
+            if (sessionSpinCode === code && sessionSpinPrize) {
+                const prize = JSON.parse(sessionSpinPrize);
+                const fakeData = { prizeType: prize.type, prizeValue: prize.value, prize: prize.label, phone: sessionStorage.getItem('byteVerifiedPhone') };
+                await applySpinPrize(code, fakeData);
+                return;
+            }
+
+            // Otherwise fetch from Firebase and verify
             const spinSnap = await db.ref('spinWinCodes/' + code).once('value');
             const spinData = spinSnap.val();
             if (!spinData) {
@@ -197,7 +208,7 @@ async function applyDiscountCode() {
                 status.style.color = '#f44336';
                 return;
             }
-            // If phone already verified this session and it matches the code → apply immediately
+            // If phone already verified this session and matches → apply
             const savedPhone = sessionStorage.getItem('byteVerifiedPhone');
             if (savedPhone && savedPhone === spinData.phone) {
                 await applySpinPrize(code, spinData);
