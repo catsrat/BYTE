@@ -230,6 +230,9 @@
         }
 
         // ── DISTANCE / DELIVERY FEE ─────────────────────────────────────────
+        const MAX_DELIVERY_KM = 7; // Hard limit — orders beyond this are rejected
+        let addressInDeliveryZone = false; // Set to true only after successful geocode within range
+
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R    = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -240,16 +243,17 @@
         }
 
         async function updateDeliveryFee() {
-            const address  = document.getElementById('address-field').value;
+            const address  = document.getElementById('address-field').value.trim();
             const statusEl = document.getElementById('delivery-status');
             if (address.length < 10) return;
 
-            statusEl.innerText = "Calculating distance... 🚚";
-            statusEl.style.color = "var(--primary)";
+            addressInDeliveryZone = false;
+            statusEl.innerText = 'Adresse wird geprüft… 🚚';
+            statusEl.style.color = 'var(--primary)';
 
             try {
                 const res  = await fetch(
-                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address + ", Solingen, Germany")}&format=json&limit=1`,
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address + ', Germany')}&format=json&limit=1`,
                     { headers: { 'User-Agent': 'ByteBurgers-Order-System' } }
                 );
                 const data = await res.json();
@@ -257,19 +261,33 @@
                 if (data.length > 0) {
                     const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
                     const distance = calculateDistance(STORE_COORDS.lat, STORE_COORDS.lon, lat, lon);
-                    const fee = distance < 5 ? 2.00 : 3.50;
-                    orderCart.deliveryFee = fee;
-                    document.getElementById('items-field').dataset.distanceKm = distance.toFixed(2);
-                    statusEl.innerText = `Distance: ${distance.toFixed(1)}km. Delivery Fee: €${fee.toFixed(2)} ✅`;
-                    statusEl.style.color = "#44ff44";
+
+                    if (distance > MAX_DELIVERY_KM) {
+                        // Outside delivery zone — hard block
+                        orderCart.deliveryFee = 0;
+                        addressInDeliveryZone = false;
+                        document.getElementById('items-field').dataset.distanceKm = distance.toFixed(2);
+                        statusEl.innerHTML = `❌ Diese Adresse liegt außerhalb unseres Liefergebiets (${distance.toFixed(1)} km). Wir liefern nur innerhalb von ${MAX_DELIVERY_KM} km.`;
+                        statusEl.style.color = '#ff4444';
+                    } else {
+                        const fee = distance < 5 ? 2.00 : 3.50;
+                        orderCart.deliveryFee = fee;
+                        addressInDeliveryZone = true;
+                        document.getElementById('items-field').dataset.distanceKm = distance.toFixed(2);
+                        statusEl.innerText = `${distance.toFixed(1)} km entfernt. Liefergebühr: €${fee.toFixed(2)} ✅`;
+                        statusEl.style.color = '#44ff44';
+                    }
                 } else {
+                    // Could not geocode — allow but warn (prevents blocking typos)
                     orderCart.deliveryFee = 3.50;
-                    statusEl.innerText = "Could not verify address. Defaulting to €3.50 fee.";
-                    statusEl.style.color = "#ffaa00";
+                    addressInDeliveryZone = true;
+                    statusEl.innerText = 'Adresse nicht gefunden. Bitte Solingen-Adresse eingeben.';
+                    statusEl.style.color = '#ffaa00';
                 }
             } catch {
                 orderCart.deliveryFee = 3.50;
-                statusEl.innerText = "Error calculating distance. Defaulting to €3.50 fee.";
+                addressInDeliveryZone = true;
+                statusEl.innerText = 'Fehler bei der Adressprüfung. Standardgebühr €3.50.';
             }
             onCartUpdate();
         }
@@ -290,7 +308,13 @@
             }
             onCartUpdate();
 
-            document.getElementById('address-field').addEventListener('blur', updateDeliveryFee);
+            const addrField = document.getElementById('address-field');
+            addrField.addEventListener('blur', updateDeliveryFee);
+            addrField.addEventListener('input', () => {
+                // Reset zone flag whenever they type — forces re-check on blur
+                addressInDeliveryZone = false;
+                document.getElementById('delivery-status').innerText = '';
+            });
 
             const checkoutForm = document.getElementById('checkout-form');
             checkoutForm.addEventListener('submit', function(e) {
@@ -308,6 +332,17 @@
                     sessionStorage.setItem('byteOrderType', 'pickup');
                     showUpsell();
                 } else {
+                    const addrVal = document.getElementById('address-field').value.trim();
+                    if (addrVal.length < 10) {
+                        alert('Bitte gib deine Lieferadresse ein.');
+                        document.getElementById('address-field').focus();
+                        return;
+                    }
+                    if (!addressInDeliveryZone) {
+                        alert(`Tut uns leid! Wir liefern nur innerhalb von ${MAX_DELIVERY_KM} km ab unserem Standort in Solingen.\n\nDeine Adresse liegt außerhalb unseres Liefergebiets.`);
+                        document.getElementById('address-field').focus();
+                        return;
+                    }
                     if (!checkMinOrder()) return;
                     document.getElementById('cash-modal').classList.add('active');
                 }
@@ -342,6 +377,8 @@
                 btnDelivery.style.background = 'rgba(255,127,0,0.2)';
                 addressSection.style.display = '';
                 addressField.value = '';
+                addressInDeliveryZone = false;
+                document.getElementById('delivery-status').innerText = '';
                 addressField.focus();
             }
         }
