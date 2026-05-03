@@ -131,7 +131,7 @@ function saveCart() {
     updateBasketUI();
 }
 
-// Menu Data for Combos
+// Menu Data for Combos — sides/drinks stay static; burgers are fetched live from Firebase
 const menuData = {
     burgers: [
         { name: 'Goat Byte Original', price: 7.48, isGoat: true },
@@ -152,6 +152,35 @@ const menuData = {
     drinks: ['Coca-Cola', 'Fanta', 'Sprite', 'Mineral Water'],
     milkshakes: ['Schokoladen-Milchshake', 'Vanille-Milchshake', 'Erdbeer-Milchshake']
 };
+
+// Live burger cache — populated from Firebase on first combo-modal open
+let liveBurgers = null;
+
+async function fetchLiveBurgers() {
+    if (liveBurgers) return liveBurgers;
+    const db = window._menuDb || (window.firebase && firebase.apps && firebase.apps.length ? firebase.database() : null);
+    if (db) {
+        try {
+            const snap = await db.ref('menu').once('value');
+            const data = snap.val() || {};
+            const fetched = Object.values(data)
+                .filter(item => item.section === 'Burgers')
+                .map(item => ({
+                    name: item.name,
+                    price: parseFloat(item.price) || 0,
+                    isGoat: (item.name || '').toLowerCase().includes('goat')
+                }));
+            if (fetched.length) {
+                liveBurgers = fetched;
+                return liveBurgers;
+            }
+        } catch (e) {
+            console.warn('fetchLiveBurgers: Firebase failed, falling back to static list', e);
+        }
+    }
+    // Fallback to hardcoded list if Firebase unavailable
+    return menuData.burgers;
+}
 
 // Combo Selection Logic
 const referencePrices = {
@@ -481,17 +510,23 @@ async function verifyOTPAndApplyDiscount() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function openTripleComboModal() {
+async function openTripleComboModal() {
     const modal = document.getElementById('triple-combo-modal');
     if (!modal) return;
-    // Populate all 3 burger selects
+    // Show loading state while fetching live burgers
     [1,2,3].forEach(i => {
         const sel = modal.querySelector(`#triple-burger-${i}`);
-        if (sel) sel.innerHTML = menuData.burgers.map(b =>
-            `<option value="${b.name}">${b.name} (€${b.price.toFixed(2)})</option>`
-        ).join('');
+        if (sel) sel.innerHTML = '<option>Wird geladen…</option>';
     });
     modal.classList.add('active');
+    const burgers = await fetchLiveBurgers();
+    // Populate all 3 burger selects with live data
+    [1,2,3].forEach(i => {
+        const sel = modal.querySelector(`#triple-burger-${i}`);
+        if (sel) sel.innerHTML = burgers.map(b =>
+            `<option value="${b.name}" data-price="${b.price}">${b.name} (€${b.price.toFixed(2)})</option>`
+        ).join('');
+    });
 }
 
 function closeTripleComboModal() {
@@ -510,10 +545,14 @@ function updateShakeSelection(personIndex) {
 
 function confirmTripleCombo() {
     const modal = document.getElementById('triple-combo-modal');
-    const persons = [1,2,3].map(i => ({
-        burger: modal.querySelector(`#triple-burger-${i}`).value,
-        shake:  (modal.querySelector(`input[name="shake-${i}"]:checked`) || {}).value || 'Schokoladen-Milchshake',
-    }));
+    const persons = [1,2,3].map(i => {
+        const sel = modal.querySelector(`#triple-burger-${i}`);
+        return {
+            burger: sel ? sel.value : '',
+            price:  sel ? parseFloat(sel.selectedOptions[0]?.dataset.price || 7.00) : 7.00,
+            shake:  (modal.querySelector(`input[name="shake-${i}"]:checked`) || {}).value || 'Schokoladen-Milchshake',
+        };
+    });
 
     const totalPrice = 25.00;
     const name = 'Triple Byte Kombo: ' + persons.map((p,i) =>
@@ -522,8 +561,7 @@ function confirmTripleCombo() {
 
     // VAT split — burgers+fries = food (7%), milkshakes = beverage (19%)
     const burgerRefTotal = persons.reduce((s, p) => {
-        const b = menuData.burgers.find(b => b.name === p.burger);
-        return s + (b ? b.price : 7.00);
+        return s + (p.price || 7.00);
     }, 0);
     const friesRef  = 3 * 2.66;
     const shakeRef  = 3 * 3.50;
@@ -543,24 +581,31 @@ function confirmTripleCombo() {
     setTimeout(() => { btn.innerText = orig; btn.style.background = ''; }, 1500);
 }
 
-function openComboSelection(type, feeLabel) {
+async function openComboSelection(type, feeLabel) {
     const fee = parseFloat(feeLabel.replace('€', '').replace('+', ''));
     currentCombo = { type: type, fee: fee };
-    
+
     const burgerSelect = document.getElementById('combo-burger');
     const sideSelect = document.getElementById('combo-side');
     const drinkSelect = document.getElementById('combo-drink');
     const title = document.getElementById('combo-title');
 
+    // Show modal immediately with loading state, then populate burgers
+    burgerSelect.innerHTML = '<option>Wird geladen…</option>';
+    document.getElementById('combo-modal').classList.add('active');
+
+    const burgers = await fetchLiveBurgers();
+
     // Filter Burgers
     burgerSelect.innerHTML = '';
-    const filteredBurgers = type === 'goat' 
-        ? menuData.burgers.filter(b => b.isGoat)
-        : menuData.burgers;
-    
+    const filteredBurgers = type === 'goat'
+        ? burgers.filter(b => b.isGoat)
+        : burgers;
+
     filteredBurgers.forEach(b => {
         const opt = document.createElement('option');
         opt.value = b.name;
+        opt.dataset.price = b.price;
         opt.innerText = `${b.name} (€${b.price.toFixed(2)})`;
         burgerSelect.appendChild(opt);
     });
@@ -585,7 +630,6 @@ function openComboSelection(type, feeLabel) {
     });
 
     title.innerText = type.toUpperCase().replace('_', ' ') + ' KONFIGURATOR';
-    document.getElementById('combo-modal').classList.add('active');
 }
 
 function closeComboModal() {
@@ -593,17 +637,18 @@ function closeComboModal() {
 }
 
 function confirmCombo() {
-    const burgerName = document.getElementById('combo-burger').value;
+    const burgerSelect = document.getElementById('combo-burger');
+    const burgerName = burgerSelect.value;
+    const burgerPrice = parseFloat(burgerSelect.selectedOptions[0]?.dataset.price || 0);
     const side = document.getElementById('combo-side').value;
     const drink = document.getElementById('combo-drink').value;
-    
-    const burger = menuData.burgers.find(b => b.name === burgerName);
-    const totalPrice = burger.price + currentCombo.fee;
-    
+
+    const totalPrice = burgerPrice + currentCombo.fee;
+
     const fullName = `${currentCombo.type.toUpperCase()}: ${burgerName} + ${side} + ${drink}`;
-    
+
     // Proportional Reference Split
-    const ref_burger = burger.price;
+    const ref_burger = burgerPrice;
     const ref_side = referencePrices[side] || 3.49;
     const ref_drink = referencePrices[drink] || 2.50;
     const total_reference = ref_burger + ref_side + ref_drink;
