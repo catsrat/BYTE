@@ -80,8 +80,18 @@
 </div>
 <!-- Address only shown for Delivery -->
 <div class="form-group full-width" id="address-section" style="display: none;">
-<label class="form-label">Lieferadresse</label>
-<textarea class="form-input" id="address-field" name="address" placeholder="Straße, Ort, Postleitzahl in Solingen"></textarea>
+<label class="form-label">Straße &amp; Hausnummer</label>
+<input class="form-input" id="address-field" name="address" placeholder="z.B. Musterstraße 12" type="text" autocomplete="street-address"/>
+<div style="display: grid; grid-template-columns: 130px 1fr; gap: 0.75rem; margin-top: 0.75rem;">
+  <div>
+    <label class="form-label" style="margin-bottom:0.3rem;display:block;">PLZ <span style="color:var(--primary)">*</span></label>
+    <input class="form-input" id="plz-field" name="plz" placeholder="426xx" maxlength="5" inputmode="numeric" pattern="[0-9]{5}" type="text" autocomplete="postal-code"/>
+  </div>
+  <div>
+    <label class="form-label" style="margin-bottom:0.3rem;display:block;">Ort</label>
+    <input class="form-input" id="city-field" name="city" value="Solingen" readonly style="opacity:0.6;cursor:default;"/>
+  </div>
+</div>
 <small id="delivery-status" style="display: block; margin-top: 0.5rem;"></small>
 </div>
 <div class="order-summary-box" style="background: rgba(255,100,0,0.1); border: 2px solid var(--primary);">
@@ -229,9 +239,11 @@
             totalEl.dataset.subtotal = totals.items_gross;
         }
 
-        // ── DISTANCE / DELIVERY FEE ─────────────────────────────────────────
-        const MAX_DELIVERY_KM = 7; // Hard limit — orders beyond this are rejected
-        let addressInDeliveryZone = false; // Set to true only after successful geocode within range
+        // ── DELIVERY ZONE ────────────────────────────────────────────────────
+        // All valid Solingen postal codes — anything else is outside our area
+        const SOLINGEN_PLZ = new Set(['42651','42653','42655','42657','42659','42697','42699','42719']);
+        const MAX_DELIVERY_KM = 7;
+        let addressInDeliveryZone = false;
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R    = 6371;
@@ -243,17 +255,32 @@
         }
 
         async function updateDeliveryFee() {
-            const address  = document.getElementById('address-field').value.trim();
+            const street   = document.getElementById('address-field').value.trim();
+            const plz      = (document.getElementById('plz-field').value || '').trim();
             const statusEl = document.getElementById('delivery-status');
-            if (address.length < 10) return;
 
+            if (!plz) return; // wait until PLZ is filled
+
+            // ── Step 1: PLZ whitelist — instant, no network needed ───────────
+            if (plz.length === 5 && !SOLINGEN_PLZ.has(plz)) {
+                addressInDeliveryZone = false;
+                orderCart.deliveryFee = 0;
+                statusEl.innerHTML = `❌ PLZ ${plz} liegt nicht in Solingen. Wir liefern nur innerhalb von Solingen (426xx).`;
+                statusEl.style.color = '#ff4444';
+                onCartUpdate();
+                return;
+            }
+            if (plz.length !== 5) return; // still typing
+
+            // ── Step 2: Geocode with the PLZ for accurate distance ───────────
             addressInDeliveryZone = false;
             statusEl.innerText = 'Adresse wird geprüft… 🚚';
             statusEl.style.color = 'var(--primary)';
 
             try {
-                const res  = await fetch(
-                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address + ', Germany')}&format=json&limit=1`,
+                const query = street ? `${street}, ${plz} Solingen, Germany` : `${plz} Solingen, Germany`;
+                const res   = await fetch(
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
                     { headers: { 'User-Agent': 'ByteBurgers-Order-System' } }
                 );
                 const data = await res.json();
@@ -263,31 +290,32 @@
                     const distance = calculateDistance(STORE_COORDS.lat, STORE_COORDS.lon, lat, lon);
 
                     if (distance > MAX_DELIVERY_KM) {
-                        // Outside delivery zone — hard block
-                        orderCart.deliveryFee = 0;
+                        // Geocoder placed it outside range despite valid PLZ — rare edge case
                         addressInDeliveryZone = false;
+                        orderCart.deliveryFee = 0;
                         document.getElementById('items-field').dataset.distanceKm = distance.toFixed(2);
-                        statusEl.innerHTML = `❌ Diese Adresse liegt außerhalb unseres Liefergebiets (${distance.toFixed(1)} km). Wir liefern nur innerhalb von ${MAX_DELIVERY_KM} km.`;
+                        statusEl.innerHTML = `❌ Adresse liegt außerhalb unseres Liefergebiets (${distance.toFixed(1)} km).`;
                         statusEl.style.color = '#ff4444';
                     } else {
                         const fee = distance < 5 ? 2.00 : 3.50;
                         orderCart.deliveryFee = fee;
                         addressInDeliveryZone = true;
                         document.getElementById('items-field').dataset.distanceKm = distance.toFixed(2);
-                        statusEl.innerText = `${distance.toFixed(1)} km entfernt. Liefergebühr: €${fee.toFixed(2)} ✅`;
+                        statusEl.innerText = `${distance.toFixed(1)} km entfernt · Liefergebühr: €${fee.toFixed(2)} ✅`;
                         statusEl.style.color = '#44ff44';
                     }
                 } else {
-                    // Could not geocode — allow but warn (prevents blocking typos)
+                    // PLZ already validated — geocode failed, accept with default fee
                     orderCart.deliveryFee = 3.50;
                     addressInDeliveryZone = true;
-                    statusEl.innerText = 'Adresse nicht gefunden. Bitte Solingen-Adresse eingeben.';
-                    statusEl.style.color = '#ffaa00';
+                    statusEl.innerText = `PLZ ${plz} Solingen bestätigt · Liefergebühr: €3.50 ✅`;
+                    statusEl.style.color = '#44ff44';
                 }
             } catch {
+                // Network error — PLZ already validated, accept
                 orderCart.deliveryFee = 3.50;
                 addressInDeliveryZone = true;
-                statusEl.innerText = 'Fehler bei der Adressprüfung. Standardgebühr €3.50.';
+                statusEl.innerText = `PLZ ${plz} Solingen bestätigt · Liefergebühr: €3.50 ✅`;
             }
             onCartUpdate();
         }
@@ -309,12 +337,14 @@
             onCartUpdate();
 
             const addrField = document.getElementById('address-field');
+            const plzField  = document.getElementById('plz-field');
             addrField.addEventListener('blur', updateDeliveryFee);
-            addrField.addEventListener('input', () => {
-                // Reset zone flag whenever they type — forces re-check on blur
+            plzField.addEventListener('blur',  updateDeliveryFee);
+            // Reset flag whenever either field is edited
+            [addrField, plzField].forEach(f => f.addEventListener('input', () => {
                 addressInDeliveryZone = false;
                 document.getElementById('delivery-status').innerText = '';
-            });
+            }));
 
             const checkoutForm = document.getElementById('checkout-form');
             checkoutForm.addEventListener('submit', function(e) {
@@ -333,14 +363,25 @@
                     showUpsell();
                 } else {
                     const addrVal = document.getElementById('address-field').value.trim();
-                    if (addrVal.length < 10) {
-                        alert('Bitte gib deine Lieferadresse ein.');
+                    const plzVal  = (document.getElementById('plz-field').value || '').trim();
+                    if (!addrVal) {
+                        alert('Bitte gib deine Straße und Hausnummer ein.');
                         document.getElementById('address-field').focus();
                         return;
                     }
+                    if (plzVal.length !== 5) {
+                        alert('Bitte gib deine Postleitzahl (PLZ) ein.');
+                        document.getElementById('plz-field').focus();
+                        return;
+                    }
+                    if (!SOLINGEN_PLZ.has(plzVal)) {
+                        alert(`PLZ ${plzVal} liegt nicht in Solingen. Wir liefern nur innerhalb von Solingen (PLZ: 42651, 42653, 42655, 42657, 42659, 42697, 42699, 42719).`);
+                        document.getElementById('plz-field').focus();
+                        return;
+                    }
                     if (!addressInDeliveryZone) {
-                        alert(`Tut uns leid! Wir liefern nur innerhalb von ${MAX_DELIVERY_KM} km ab unserem Standort in Solingen.\n\nDeine Adresse liegt außerhalb unseres Liefergebiets.`);
-                        document.getElementById('address-field').focus();
+                        alert('Bitte warte kurz — die Adresse wird noch geprüft.');
+                        document.getElementById('plz-field').focus();
                         return;
                     }
                     if (!checkMinOrder()) return;
@@ -377,6 +418,7 @@
                 btnDelivery.style.background = 'rgba(255,127,0,0.2)';
                 addressSection.style.display = '';
                 addressField.value = '';
+                document.getElementById('plz-field').value = '';
                 addressInDeliveryZone = false;
                 document.getElementById('delivery-status').innerText = '';
                 addressField.focus();
@@ -403,7 +445,10 @@
                     status: 'confirmed', created_at: Date.now(), type: orderType,
                     name:    form.querySelector('[name="name"]')?.value || '',
                     phone:   form.querySelector('[name="phone"]')?.value || '',
-                    address: document.getElementById('address-field')?.value || '',
+                    address: [
+                        document.getElementById('address-field')?.value || '',
+                        (document.getElementById('plz-field')?.value || '') + ' Solingen'
+                    ].filter(Boolean).join(', '),
                     items:   document.getElementById('items-field')?.value || '',
                     payment: document.getElementById('payment-field')?.value || '',
                     notes:   form.querySelector('[name="notes"]')?.value || '',
