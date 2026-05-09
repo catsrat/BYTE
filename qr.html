@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BYTE Burgers – QR Code</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #f0ede8;
+    font-family: 'Arial Black', Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 2rem;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  /* ── CARD ─────────────────────────────────────────────────────────── */
+  .card {
+    background: #0d0a07;
+    border-radius: 20px;
+    width: 320px;
+    padding: 2rem 1.8rem 1.8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* decorative orange glow blob */
+  .card::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(255,127,31,.35) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .logo {
+    width: 110px;
+  }
+
+  .tagline {
+    color: #ff7f1f;
+    font-size: .8rem;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,127,31,.5), transparent);
+  }
+
+  /* ── QR WRAPPER ────────────────────────────────────────────────────── */
+  .qr-wrap {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(255,127,31,.25);
+  }
+
+  #qrcode canvas, #qrcode img { display: block; }
+
+  .scan-label {
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 900;
+    letter-spacing: .04em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .scan-sub {
+    color: rgba(255,255,255,.45);
+    font-size: .72rem;
+    text-align: center;
+    letter-spacing: .03em;
+  }
+
+  .url-pill {
+    background: rgba(255,127,31,.12);
+    border: 1px solid rgba(255,127,31,.3);
+    border-radius: 30px;
+    padding: .35rem 1rem;
+    color: #ff9f5f;
+    font-size: .72rem;
+    letter-spacing: .04em;
+  }
+
+  .halal-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-top: -.2rem;
+  }
+  .halal-row img { height: 26px; }
+  .halal-text {
+    color: rgba(255,255,255,.4);
+    font-size: .65rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  /* ── PRINT CONTROLS ────────────────────────────────────────────────── */
+  .controls {
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+
+  .btn {
+    background: #ff7f1f;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: .7rem 1.8rem;
+    font-size: .9rem;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    transition: opacity .2s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn.outline {
+    background: transparent;
+    border: 2px solid #ff7f1f;
+    color: #ff7f1f;
+  }
+
+  /* ── PRINT STYLES ──────────────────────────────────────────────────── */
+  @media print {
+    body { background: #fff; padding: .5cm; gap: 1cm; justify-content: center; }
+    .controls { display: none; }
+    .card { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card 1 — Scan to Order -->
+<div class="card">
+  <img src="images/logo-white.png" alt="BYTE Burgers" class="logo"/>
+  <p class="tagline">Solingen's #1 Halal Burger</p>
+  <div class="divider"></div>
+  <p class="scan-label">Scan &amp; Bestellen</p>
+  <div class="qr-wrap">
+    <div id="qrcode"></div>
+  </div>
+  <p class="scan-sub">Halte deine Kamera auf den QR-Code<br/>und bestelle direkt vom Tisch</p>
+  <div class="url-pill">byteburgers.shop</div>
+  <div class="halal-row">
+    <img src="images/halal-badge.png" alt="Halal"/>
+    <span class="halal-text">100 % Halal zertifiziert</span>
+  </div>
+</div>
+
+<!-- Card 2 — Scan to Menu (duplicate for printing pairs) -->
+<div class="card">
+  <img src="images/logo-white.png" alt="BYTE Burgers" class="logo"/>
+  <p class="tagline">Solingen's #1 Halal Burger</p>
+  <div class="divider"></div>
+  <p class="scan-label">Scan &amp; Bestellen</p>
+  <div class="qr-wrap">
+    <div id="qrcode2"></div>
+  </div>
+  <p class="scan-sub">Halte deine Kamera auf den QR-Code<br/>und bestelle direkt vom Tisch</p>
+  <div class="url-pill">byteburgers.shop</div>
+  <div class="halal-row">
+    <img src="images/halal-badge.png" alt="Halal"/>
+    <span class="halal-text">100 % Halal zertifiziert</span>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn" onclick="window.print()">🖨️ Print QR Cards</button>
+  <button class="btn outline" onclick="downloadQR()">⬇️ Download QR Image</button>
+</div>
+
+<script>
+  const URL = 'https://byteburgers.shop';
+
+  function makeQR(elementId) {
+    return new QRCode(document.getElementById(elementId), {
+      text: URL,
+      width: 220,
+      height: 220,
+      colorDark: '#1a0f05',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  }
+
+  const qr1 = makeQR('qrcode');
+  makeQR('qrcode2');
+
+  function downloadQR() {
+    // Give QRCode a moment to render then grab the canvas
+    setTimeout(() => {
+      const canvas = document.querySelector('#qrcode canvas');
+      if (!canvas) { alert('QR not ready yet — try again.'); return; }
+      const link = document.createElement('a');
+      link.download = 'byteburgers-qr.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }, 200);
+  }
+</script>
+</body>
+</html>
