@@ -759,7 +759,11 @@ function setStatus(id, status) {
 }
 
 function updateBadge() {
-    const active = Object.values(allOrders).filter(o => !['delivered'].includes(o.status)).length;
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const active = Object.values(allOrders).filter(o =>
+        !['delivered','cancelled'].includes(o.status) &&
+        o.created_at >= todayStart.getTime()
+    ).length;
     const badge = document.getElementById('orders-badge');
     if (active > 0) { badge.textContent = active; badge.style.display = 'inline'; }
     else { badge.style.display = 'none'; }
