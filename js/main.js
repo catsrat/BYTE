@@ -1054,7 +1054,9 @@ function doCheckout() {
     // STEP 7: Build base order string — items only, no VAT yet (order.html adds that)
     const finalOrder = `${itemsSummary}${discountLine}\n\nItems Total: €${discountedGross.toFixed(2)}`;
 
-    window.location.href = `order.html?items=${encodeURIComponent(finalOrder)}`;
+    const tableNum = sessionStorage.getItem('byteTableNumber');
+    const tableParam = tableNum ? '&table=' + encodeURIComponent(tableNum) : '';
+    window.location.href = `order.html?items=${encodeURIComponent(finalOrder)}${tableParam}`;
 }
 
 // Initialize UI on load

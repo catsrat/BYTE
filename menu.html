@@ -644,6 +644,19 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="js/main.js"></script>
 <script>
+// ── TABLE QR: save table number for checkout ──────────────────────────────
+(function() {
+    const t = new URLSearchParams(window.location.search).get('table');
+    if (t) {
+        sessionStorage.setItem('byteTableNumber', t);
+        // Show a subtle banner at the top
+        const banner = document.createElement('div');
+        banner.textContent = '🪑 Tisch ' + t + ' — Wähle deine Artikel und klicke auf Bestellen';
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#ff7f1f;color:#fff;text-align:center;font-weight:900;font-size:.85rem;letter-spacing:.04em;padding:.45rem 1rem;';
+        document.body.prepend(banner);
+    }
+})();
+
 // ── DYNAMIC MENU FROM FIREBASE ────────────────────────────────────────────
 (function() {
 

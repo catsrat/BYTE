@@ -339,7 +339,8 @@
             onCartUpdate();
 
             // ── TABLE QR detection ───────────────────────────────────────────
-            const tableNum = new URLSearchParams(window.location.search).get('table');
+            const tableNum = new URLSearchParams(window.location.search).get('table')
+                          || sessionStorage.getItem('byteTableNumber');
             if (tableNum) {
                 document.getElementById('table-field').value = tableNum;
                 const banner = document.getElementById('table-banner');
