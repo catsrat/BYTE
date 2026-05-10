@@ -43,10 +43,12 @@
 <div class="order-form-container gs_reveal">
 <div class="order-wrap">
 <h1 class="text-gradient gs_reveal_text">Schließen Sie Ihre Bestellung ab</h1>
+<div id="table-banner" style="display:none;background:rgba(255,127,0,0.12);border:2px solid rgba(255,127,0,0.4);border-radius:12px;padding:.75rem 1.2rem;text-align:center;font-weight:900;font-size:1.1rem;color:#ff7f1f;letter-spacing:.04em;margin-bottom:.5rem;"></div>
 <form action="#" class="order-form" id="checkout-form" method="POST">
 <input name="_captcha" type="hidden" value="false"/>
 <input id="payment-field" name="Payment_Status" type="hidden" value="Cash Pending"/>
 <input id="order-type-field" name="Order_Type" type="hidden" value=""/>
+<input id="table-field" name="Table" type="hidden" value=""/>
 <input name="_honey" style="display:none" type="text"/>
 
 <!-- Step 1: Fulfillment Type Selector (inline, top of form) -->
@@ -336,6 +338,18 @@
             }
             onCartUpdate();
 
+            // ── TABLE QR detection ───────────────────────────────────────────
+            const tableNum = new URLSearchParams(window.location.search).get('table');
+            if (tableNum) {
+                document.getElementById('table-field').value = tableNum;
+                const banner = document.getElementById('table-banner');
+                banner.textContent = '🪑 Tisch ' + tableNum;
+                banner.style.display = 'block';
+                // Dine-in = treated as pickup; hide delivery option
+                chooseFulfillment('pickup');
+                document.getElementById('fulfillment-selector').style.display = 'none';
+            }
+
             const addrField = document.getElementById('address-field');
             const plzField  = document.getElementById('plz-field');
             addrField.addEventListener('blur', updateDeliveryFee);
@@ -453,7 +467,8 @@
                     payment: document.getElementById('payment-field')?.value || '',
                     notes:   form.querySelector('[name="notes"]')?.value || '',
                     total:   totals.gross_total,
-                    distance_km: distKm, eta_minutes: etaMins
+                    distance_km: distKm, eta_minutes: etaMins,
+                    table_number: document.getElementById('table-field')?.value || null
                 });
             } catch(e) {}
 

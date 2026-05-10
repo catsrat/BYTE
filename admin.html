@@ -715,12 +715,13 @@ function orderCardHTML(id, o) {
         on_the_way:'🛵 On the Way', delivered: isPickup ? '🏠 Picked Up' : '📦 Delivered'
     }[o.status] || o.status;
     const typeIcon = o.type === 'delivery' ? '🚴' : '🏠';
+    const tableTag = o.table_number ? `<span style="background:rgba(255,127,0,0.18);color:#ff9f5f;border:1px solid rgba(255,127,0,0.4);border-radius:8px;padding:.1rem .55rem;font-size:.72rem;font-weight:900;margin-left:.4rem;">🪑 Tisch ${o.table_number}</span>` : '';
     const preview = (o.items||'').split('\n').slice(0,2).join(' · ');
     return `
     <div class="order-card" id="card-${id}">
         <div class="order-card-top">
             <div>
-                <div class="order-id">#${id}</div>
+                <div class="order-id">#${id}${tableTag}</div>
                 <div class="order-meta">${typeIcon} ${o.type||'?'} · ${time}</div>
             </div>
             <div style="text-align:right">
