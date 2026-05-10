@@ -714,7 +714,8 @@ function orderCardHTML(id, o) {
     const doneLabel = isDineIn ? '🪑 Serviert' : isPickup ? '🏠 Picked Up' : '📦 Delivered';
     const statusLabel = {
         confirmed:'⏳ Confirmed', preparing:'🔥 Preparing', ready:'✅ Ready',
-        on_the_way:'🛵 On the Way', delivered: doneLabel
+        on_the_way: isDineIn ? '🪑 Wird serviert…' : '🛵 On the Way',
+        delivered: doneLabel
     }[o.status] || o.status;
     const typeIcon = isDineIn ? '🪑' : o.type === 'delivery' ? '🚴' : '🏠';
     const tableTag = o.table_number ? `<span style="background:rgba(255,127,0,0.18);color:#ff9f5f;border:1px solid rgba(255,127,0,0.4);border-radius:8px;padding:.1rem .55rem;font-size:.72rem;font-weight:900;margin-left:.4rem;">🪑 Tisch ${o.table_number}</span>` : '';
@@ -754,7 +755,9 @@ function statusButtons(id, status) {
             : isPickup
             ? `<button class="btn btn-green btn-sm" onclick="setStatus('${id}','delivered')">✅ Collected</button>`
             : `<button class="btn btn-green btn-sm" onclick="setStatus('${id}','on_the_way')">🛵 Send Out</button>`,
-        on_the_way:`<button class="btn btn-green btn-sm" onclick="setStatus('${id}','delivered')">📦 Delivered</button>`,
+        on_the_way: isDineIn
+            ? `<button class="btn btn-green btn-sm" onclick="setStatus('${id}','delivered')">🪑 Serviert</button>`
+            : `<button class="btn btn-green btn-sm" onclick="setStatus('${id}','delivered')">📦 Delivered</button>`,
         delivered: `<span style="font-size:.78rem;color:var(--muted)">Completed</span>`
     };
     return map[status] || '';
