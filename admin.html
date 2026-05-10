@@ -709,12 +709,14 @@ function renderOrders() {
 function orderCardHTML(id, o) {
     const time = new Date(o.created_at).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     const statusClass = 's-' + (o.status||'confirmed');
-    const isPickup = (o.type||'').toLowerCase() === 'pickup';
+    const isDineIn  = (o.type||'').toLowerCase() === 'dine-in';
+    const isPickup  = (o.type||'').toLowerCase() === 'pickup';
+    const doneLabel = isDineIn ? '🪑 Serviert' : isPickup ? '🏠 Picked Up' : '📦 Delivered';
     const statusLabel = {
         confirmed:'⏳ Confirmed', preparing:'🔥 Preparing', ready:'✅ Ready',
-        on_the_way:'🛵 On the Way', delivered: isPickup ? '🏠 Picked Up' : '📦 Delivered'
+        on_the_way:'🛵 On the Way', delivered: doneLabel
     }[o.status] || o.status;
-    const typeIcon = o.type === 'delivery' ? '🚴' : '🏠';
+    const typeIcon = isDineIn ? '🪑' : o.type === 'delivery' ? '🚴' : '🏠';
     const tableTag = o.table_number ? `<span style="background:rgba(255,127,0,0.18);color:#ff9f5f;border:1px solid rgba(255,127,0,0.4);border-radius:8px;padding:.1rem .55rem;font-size:.72rem;font-weight:900;margin-left:.4rem;">🪑 Tisch ${o.table_number}</span>` : '';
     const preview = (o.items||'').split('\n').slice(0,2).join(' · ');
     return `
@@ -742,11 +744,14 @@ function orderCardHTML(id, o) {
 
 function statusButtons(id, status) {
     const o = allOrders[id] || {};
+    const isDineIn = (o.type || '').toLowerCase() === 'dine-in';
     const isPickup = (o.type || '').toLowerCase() === 'pickup';
     const map = {
         confirmed: `<button class="btn btn-primary btn-sm" onclick="setStatus('${id}','preparing')">🔥 Preparing</button>`,
         preparing: `<button class="btn btn-primary btn-sm" onclick="setStatus('${id}','ready')">✅ Ready</button>`,
-        ready:     isPickup
+        ready:     isDineIn
+            ? `<button class="btn btn-green btn-sm" onclick="setStatus('${id}','delivered')">🪑 Serviert</button>`
+            : isPickup
             ? `<button class="btn btn-green btn-sm" onclick="setStatus('${id}','delivered')">✅ Collected</button>`
             : `<button class="btn btn-green btn-sm" onclick="setStatus('${id}','on_the_way')">🛵 Send Out</button>`,
         on_the_way:`<button class="btn btn-green btn-sm" onclick="setStatus('${id}','delivered')">📦 Delivered</button>`,

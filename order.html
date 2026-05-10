@@ -346,9 +346,14 @@
                 const banner = document.getElementById('table-banner');
                 banner.textContent = '🪑 Tisch ' + tableNum;
                 banner.style.display = 'block';
-                // Dine-in = treated as pickup; hide delivery option
-                chooseFulfillment('pickup');
+                // Set dine-in fulfillment and hide the selector
+                document.getElementById('order-type-field').value = 'dine-in';
+                document.getElementById('address-field').value = 'Dine-in – Tisch ' + tableNum;
+                document.getElementById('address-section').style.display = 'none';
                 document.getElementById('fulfillment-selector').style.display = 'none';
+                orderCart.deliveryFee = 0;
+                sessionStorage.setItem('byteOrderType', 'dine-in');
+                onCartUpdate();
             }
 
             const addrField = document.getElementById('address-field');
@@ -371,7 +376,13 @@
                     document.getElementById('fulfillment-selector').scrollIntoView({ behavior: 'smooth' });
                     return;
                 }
-                if (orderType === 'pickup') {
+                if (orderType === 'dine-in') {
+                    const tbl = document.getElementById('table-field').value;
+                    document.getElementById('payment-field').value = `CASH: Dine-in — Tisch ${tbl}, zahlt am Tisch.`;
+                    checkoutForm.dataset.cashConfirmed = 'true';
+                    sessionStorage.setItem('byteOrderType', 'dine-in');
+                    showUpsell();
+                } else if (orderType === 'pickup') {
                     document.getElementById('payment-field').value = 'CASH: Pickup — Customer pays at store.';
                     checkoutForm.dataset.cashConfirmed = 'true';
                     sessionStorage.setItem('byteOrderType', 'pickup');
